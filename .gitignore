@@ -1,0 +1,14 @@
+/build/
+/.gradle/
+/local.properties
+/output/
+/IMPLEMENTATION_CONTRACT.md
+/docs/installation-baseline-sha256.json
+/vendor/jna-*.jar
+/vendor/jna-platform-*.jar
+__pycache__/
+*.pyc
+.env
+.env.*
+*.log
+*.class

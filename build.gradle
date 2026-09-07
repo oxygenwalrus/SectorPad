@@ -1,0 +1,15 @@
+plugins { id 'base' }
+
+// Optional Gradle entry points delegate to the same native/Java packager.
+def python = providers.gradleProperty('python').orElse('python')
+tasks.register('packageMod', Exec) {
+    commandLine python.get(), 'tools/build.py'
+    if (providers.gradleProperty('starsectorHome').isPresent()) {
+        args '--game', providers.gradleProperty('starsectorHome').get()
+    }
+}
+tasks.register('verifyLogic', Exec) {
+    commandLine python.get(), 'tools/build.py', '--logic-only'
+}
+tasks.named('assemble') { dependsOn 'packageMod' }
+tasks.named('check') { dependsOn 'verifyLogic' }

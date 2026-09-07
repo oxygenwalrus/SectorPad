@@ -1,0 +1,5 @@
+{
+  "plugins": {
+    "SectorPadSupport": "sectorpad.game.SectorPadCombatPlugin"
+  }
+}

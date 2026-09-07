@@ -1,0 +1,19 @@
+{
+  "id": "sectorpad",
+  "name": "SectorPad",
+  "author": "SectorPad contributors",
+  "version": "1.0.0",
+  "description": "Additive Xbox and Steam Deck-style controller controls, radial menus, text entry, and LunaLib remapping.",
+  "gameVersion": "0.98a-RC8",
+  "utility": true,
+  "jars": [
+    "jars/SectorPad.jar",
+    "jars/jamepad-sectorpad-2.30.0.0.jar",
+    "jars/gdx-jnigen-loader-2.2.0.jar"
+  ],
+  "modPlugin": "sectorpad.SectorPadModPlugin",
+  "dependencies": [
+    {"id": "lunalib", "name": "LunaLib", "version": "2.0.5"},
+    {"id": "lw_lazylib", "name": "LazyLib", "version": "3.0"}
+  ]
+}
