@@ -120,7 +120,7 @@ static jint submit(Observer *owner,INPUT *events,UINT count,BOOL needs_focus) {
     error=GetLastError();return (jint)(error==0 ? ERROR_WRITE_FAULT : error);
 }
 
-JNIEXPORT jint JNICALL JNI_FN(nativeAbiVersion)(JNIEnv *env,jclass type) {UNUSED(env);UNUSED(type);return 1;}
+JNIEXPORT jint JNICALL JNI_FN(nativeAbiVersion)(JNIEnv *env,jclass type) {UNUSED(env);UNUSED(type);return 2;}
 JNIEXPORT jlong JNICALL JNI_FN(nativeOpen)(JNIEnv *env,jclass type) {
     Observer *owner=(Observer *)calloc(1,sizeof(Observer));UNUSED(env);UNUSED(type);
     if(owner==NULL)return 0;
@@ -133,6 +133,9 @@ JNIEXPORT jlong JNICALL JNI_FN(nativeOpen)(JNIEnv *env,jclass type) {
 }
 JNIEXPORT jboolean JNICALL JNI_FN(nativeAlive)(JNIEnv *env,jclass type,jlong handle) {
     Observer *owner=context(handle);UNUSED(env);UNUSED(type);return owner!=NULL && owner->alive ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL JNI_FN(nativeFocused)(JNIEnv *env,jclass type) {
+    UNUSED(env);UNUSED(type);return focused_process() ? JNI_TRUE : JNI_FALSE;
 }
 JNIEXPORT jboolean JNICALL JNI_FN(nativeObserve)(JNIEnv *env,jclass type,jlong handle,jboolean active,jintArray mapping) {
     Observer *owner=context(handle);jint virtual_keys[256]={0};int index;static const int mouse_keys[3]={VK_LBUTTON,VK_RBUTTON,VK_MBUTTON};UNUSED(type);

@@ -9,6 +9,7 @@ public final class WindowsInputNativeProbe {
         ModNativeLoader.loadFromDirectory(args[0],WindowsInputOutput.LIBRARY);
         for(int attempt=0;attempt<3;attempt++) {
             try(WindowsInputOutput output=new WindowsInputOutput(true)) {
+                output.acceptsFocus(); // Query only: verifies foreground capability without activating observation.
                 for(int key=1;key<256;key++) if(output.isPhysicalKeyDown(key))throw new AssertionError("Inactive observer must not retain physical state");
                 if(!output.supportsUnicode() || !output.preservesPhysicalHolds())throw new AssertionError("Native capabilities unavailable");
             }

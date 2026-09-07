@@ -14,6 +14,7 @@ import sectorpad.settings.*;
 import sectorpad.ui.OverlayRenderer;
 import sectorpad.ui.OverlayLayout;
 import sectorpad.compat.ConsoleIntegration;
+import sectorpad.diagnostics.Diagnostics;
 import java.util.*;
 
 /** One game-thread owner coordinates the device, logical bindings, overlays and vanilla actions. */
@@ -28,8 +29,10 @@ public final class SectorPadRuntime implements AutoCloseable {
     private final ReadOnlyUiNavigator navigator=new ReadOnlyUiNavigator();
     private final SettingsService settings=new SettingsService(ProfileStore.inCommonData());
     private final InputGate gate=new InputGate();
+    private final MainMenuShortcuts menuShortcuts=new MainMenuShortcuts();
     private final UiClock clock=new UiClock();
     private final RepeatKey navigation=new RepeatKey(),modalNavigation=new RepeatKey();
+    private final NavigationDirection navigationDirection=new NavigationDirection();
     private final ScrollAccumulator scrolling=new ScrollAccumulator(),zooming=new ScrollAccumulator();
     private final RadialModel wheel=new RadialModel();
     private final TextEntryModel keyboard=new TextEntryModel();
@@ -53,7 +56,7 @@ public final class SectorPadRuntime implements AutoCloseable {
     private boolean initialized,closed,precision,campaignPointer,latchedDrag,multiSelect,requireReconnectAck,wasConnected;
     private boolean outputPrepared;
     private boolean physicalModalDispatch,physicalBridgeWork,deferredControllerOwned,quantityControllerOwned;
-    private boolean controllerLastInput;
+    private boolean controllerLastInput,focusedLastFrame;
     private boolean ltHeld,rtHeld,panning,recoveryOverride;
     private PendingWheel pendingWheel;
     private record PendingWheel(String title,String catalog,String opener,long started,String context){}
@@ -64,22 +67,31 @@ public final class SectorPadRuntime implements AutoCloseable {
     public void initialize(){
         if(initialized||closed)return;initialized=true;
         settings.setListener(new SettingsService.Listener(){
-            @Override public void changed(ControllerSettings prefs,BindingProfile profile){releaseInputs();}
+            @Override public void changed(ControllerSettings prefs,BindingProfile profile){if(!closed)releaseInputs();}
             @Override public void statusChanged(String message){notifyStatus(message);}
         });
+        Diagnostics.startSession();
         settings.initialize();
-        Runtime.getRuntime().addShutdownHook(new Thread(()->{bridge.close();backend.close();},"SectorPad-input-release"));
+        try { Runtime.getRuntime().addShutdownHook(new Thread(()->FailureCleanup.run(
+            failure->Diagnostics.error("shutdown.cleanup",failure),bridge::close,backend::close),"SectorPad-input-release")); }
+        catch(RuntimeException failure){Diagnostics.error("shutdown.hook_unavailable",failure);}
     }
-    public void onGameLoad(){initialize();cancelOverlays();settings.refresh();releaseInputs();}
+    public void onGameLoad(){
+        initialize();cancelOverlays();settings.refresh();releaseInputs();
+        // Loading is an expected clock gap, not a device disconnect or suspend/resume.
+        clock.reset();lastAdvance=0;
+        Diagnostics.event("campaign.loaded");
+    }
     public void advance(){
         if(closed||!Display.isCreated())return;
         long now=System.nanoTime();
         // Title background and campaign hooks can both be called during transitions.
         if(lastAdvance!=0&&now-lastAdvance<1_000_000L)return;lastAdvance=now;
         try{tick(now);}catch(RuntimeException|LinkageError failure){
-            errors++;game.invalidatePauseResume();releaseInputs();cancelOverlays();
-            notifyStatus("SectorPad stopped input safely: "+failure.getClass().getSimpleName());
-            if(errors<4)Global.getLogger(SectorPadRuntime.class).error("SectorPad input failed; native controls remain available",failure);
+            errors++;
+            // Let the lifecycle boundary disable the addon and run each cleanup independently.
+            // A broken tick must not continue retrying input every frame.
+            throw failure;
         }
     }
     private void tick(long now){
@@ -91,26 +103,43 @@ public final class SectorPadRuntime implements AutoCloseable {
         if(raw.connected())settings.setDevice("sdl:"+raw.deviceName()+":standard-gamepad");
         // Menus, quantity cancellation and gameplay must share the same calibrated trigger edges.
         calibrated=calibrate(raw,prefs);
-        if(raw.connected()&&prefs.enabled&&Display.isActive()&&(!raw.buttons().equals(previousRaw.buttons())||Math.abs(raw.lx()-previousRaw.lx())>.05f||Math.abs(raw.ly()-previousRaw.ly())>.05f||Math.abs(raw.rx()-previousRaw.rx())>.05f||Math.abs(raw.ry()-previousRaw.ry())>.05f||Math.abs(raw.lt()-previousRaw.lt())>.05f||Math.abs(raw.rt()-previousRaw.rt())>.05f))controllerLastInput=true;
-        console.update(controllerLastInput&&raw.connected(),Display.isActive(),prefs.enabled&&prefs.consoleTopLeft,keyboard.isOpen()&&keyboard.docked(),prefs.uiScale);
+        boolean focused=bridge.hasGameFocus();
+        Diagnostics.state("connected",Boolean.toString(raw.connected()));
+        Diagnostics.state("focused",Boolean.toString(focused));
+        Diagnostics.state("independent_triggers",Boolean.toString(raw.independentTriggers()));
+        Diagnostics.state("controller_enabled",Boolean.toString(prefs.enabled));
+        Diagnostics.state("reconnect_ack",Boolean.toString(requireReconnectAck));
+        if(raw.connected()!=previousRaw.connected()){
+            Diagnostics.event(raw.connected()?"controller.connected":"controller.disconnected");
+            if(raw.connected())notifyStatus("Controller detected. Release controls to begin; X opens Setup on the main menu.");
+        }
+        if(focused!=focusedLastFrame){Diagnostics.event(focused?"input.focus_regained":"input.focus_lost");focusedLastFrame=focused;}
+        if(raw.connected()&&prefs.enabled&&focused&&(!raw.buttons().equals(previousRaw.buttons())||Math.abs(raw.lx()-previousRaw.lx())>.05f||Math.abs(raw.ly()-previousRaw.ly())>.05f||Math.abs(raw.rx()-previousRaw.rx())>.05f||Math.abs(raw.ry()-previousRaw.ry())>.05f||Math.abs(raw.lt()-previousRaw.lt())>.05f||Math.abs(raw.rt()-previousRaw.rt())>.05f))controllerLastInput=true;
+        console.update(controllerLastInput&&raw.connected(),focused,prefs.enabled&&prefs.consoleTopLeft,keyboard.isOpen()&&keyboard.docked(),prefs.uiScale);
         GameContext next=game.context();
         Object consoleInstance=console.activeInstance();
         if(consoleInstance!=null)next=new GameContext("UI",next.identity()+":console:"+System.identityHashCode(consoleInstance),false,true,"Console Commands");
         boolean changed=!next.identity().equals(context.identity()),pauseChanged=next.paused()!=context.paused();context=next;
+        Diagnostics.state("context",context.name());
+        Diagnostics.state("paused",Boolean.toString(context.paused()));
+        Diagnostics.state("campaign_pointer",Boolean.toString(campaignPointer));
         if(changed){settings.revert("The screen changed; previous controls restored.");cancelOverlays();releaseInputs();navigator.clearSelection();campaignPointer=false;multiSelect=false;}
         if(pauseChanged&&!hasModal())releaseInputs();
         if(raw.connected()&&wasConnected&&!raw.deviceId().equals(previousDevice)){
+            Diagnostics.event("controller.changed");
             game.invalidatePauseResume();settings.revert("The controller changed; previous controls restored.");cancelOverlays();releaseInputs();requireReconnectAck=true;
             if(prefs.pauseOnDisconnect)game.requestPause();
         }
         if(clock.interrupted()){
+            Diagnostics.event("input.interrupted");
             // Staged keyboard-only menus contain no held game input. Preserve that work
             // through harmless long frames; controller/output ownership still fails closed.
             boolean owned=raw.connected()||wasConnected||quantities.isActive()||physicalBridgeWork||deferredAction!=null;
             game.invalidatePauseResume();releaseInputs();
             if(owned){settings.revert("Input was interrupted; previous controls restored.");cancelOverlays();requireReconnectAck=raw.connected();if(prefs.pauseOnDisconnect)game.requestPause();}
         }
-        if(!Display.isActive()){
+        if(!focused){
+            menuShortcuts.update(calibrated,false);
             game.invalidatePauseResume();settings.revert("The game lost focus; previous controls restored.");bridge.pump(false,context.identity());cancelOverlays();releaseInputs();
             if(wasConnected&&prefs.pauseOnDisconnect)game.requestPause();return;
         }
@@ -139,6 +168,17 @@ public final class SectorPadRuntime implements AutoCloseable {
             return;
         }
         recovery(now);
+        MainMenuShortcuts.Action shortcut=menuShortcuts.update(calibrated,mainMenuShortcutsAvailable());
+        if(shortcut!=MainMenuShortcuts.Action.NONE){
+            controllerLastInput=true;releaseInputs();
+            switch(shortcut){
+                case SETUP -> openSettings();
+                case LUNA -> { defer(this::openNativeSettings); physicalBridgeWork=true; }
+                case KEYBOARD -> openKeyboard(false);
+                default -> { }
+            }
+            return;
+        }
         if(!raw.connected()){
             if(wasConnected){game.invalidatePauseResume();cancelOverlays();releaseInputs();settings.revert("Controller disconnected; previous controls restored.");
                 requireReconnectAck=true;if(prefs.pauseOnDisconnect)game.requestPause();}
@@ -147,7 +187,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         wasConnected=true;
         if(remapPanel!=null){bridge.pump(false,context.identity()+":remap");return;}
         if(prefs.enabled)recoveryOverride=false;
-        if(!prefs.enabled&&!recoveryOverride){bridge.pump(false,context.identity());return;}
+        if(!prefs.enabled&&!recoveryOverride&&deferredAction==null&&!hasModal()){bridge.pump(false,context.identity());return;}
         if(requireReconnectAck){
             bridge.pump(false,context.identity()+":reconnect");
             if(gate.armWhenNeutral(calibrated,Math.max(prefs.leftDeadzone,prefs.rightDeadzone))){
@@ -235,6 +275,7 @@ public final class SectorPadRuntime implements AutoCloseable {
             if(recoveryStarted==0)recoveryStarted=now;
             if(!recoveryFired&&now-recoveryStarted>=2_000_000_000L){
                 recoveryFired=true;recoveryOverride=!settings.settings().enabled;settings.revert("Recovery opened. Previous controls restored.");openSettings();
+                Diagnostics.event("recovery.opened");
             }
         }else{recoveryStarted=0;recoveryFired=false;}
     }
@@ -243,7 +284,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         float[] scroll=vector(profile.binding(mode,"ui.scroll"),calibrated);
         pointer(pointing[0],pointing[1],dt,prefs);
         navigator.refresh(game.uiRoot());
-        String direction=edges.held().stream().filter(a->Set.of("ui.up","ui.down","ui.left","ui.right").contains(a)).findFirst().orElse("");
+        String direction=navigationDirection.choose(edges.held());
         if(navigation.pulse(direction,now,prefs.repeatDelay,prefs.repeatInterval)){
             int dx=direction.equals("ui.left")?-1:direction.equals("ui.right")?1:0;
             int dy=direction.equals("ui.down")?-1:direction.equals("ui.up")?1:0;
@@ -285,7 +326,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         if(edges.pressed("ui.cancel")||edges.pressed("game.menu")){console.closeConsole();releaseInputs();return;}
         if(edges.pressed("ui.secondary")){openKeyboard(false);return;}
         if(edges.pressed("ui.actions"))bridge.keyTap(Keyboard.KEY_TAB);
-        String direction=edges.held().stream().filter(a->Set.of("ui.up","ui.down","ui.left","ui.right").contains(a)).findFirst().orElse("");
+        String direction=navigationDirection.choose(edges.held());
         if(navigation.pulse(direction,now,prefs.repeatDelay,prefs.repeatInterval))bridge.keyTap(switch(direction){case "ui.up"->Keyboard.KEY_UP;case "ui.down"->Keyboard.KEY_DOWN;case "ui.left"->Keyboard.KEY_LEFT;default->Keyboard.KEY_RIGHT;});
         float[] scroll=vector(profile.binding("UI","ui.scroll"),calibrated);
         int notches=scrolling.advance(context.identity(),scroll[1]*prefs.scrollSpeed*(prefs.invertScroll?-1:1),dt);
@@ -383,6 +424,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         entries.addAll(gameEntries("hub"));
         entries.add(entry("help","Controls & help","Show effective controller bindings",this::openHelp));
         entries.add(entry("settings","Mod settings","Open the existing LunaLib Mod Settings menu",()->ordinaryAction("game.settings")));
+        entries.add(entry("diagnostics","Export diagnostics","Save a bounded local report without typed text or save data",()->notifyStatus(Diagnostics.exportReport())));
         openWheel("hub","Command hub",entries,false,settings.activeProfile().binding(context.name(),"hub.open"));
     }
     private void openPointerTools(){
@@ -405,6 +447,7 @@ public final class SectorPadRuntime implements AutoCloseable {
     }
     private static RadialModel.Entry entry(String id,String label,String description,Runnable runnable){return new RadialModel.Entry(id,label,description,true,"",false,runnable);}
     public void openKeyboard(boolean numeric){
+        Diagnostics.event("menu.keyboard");
         cancelOverlays();releaseInputs();navigator.refresh(game.uiRoot());textField=navigator.focusedTextField();
         textCapture=navigator.captureText();
         consoleTextTarget=!numeric?console.activeInstance():null;
@@ -449,6 +492,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         });
     }
     public void openSettings(){
+        Diagnostics.event("menu.setup");
         cancelOverlays();releaseInputs();acquirePause();
         remapPanel=new LunaRemappingPanel(settings,()->LunaRemappingPanel.InputState.fromFrames(calibrated,raw,Display.isActive()),this::closeSettings);
         remapHandle=OverlayHost.get().mount(remapPanel);
@@ -494,6 +538,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         }
     }
     private void openNativeSettings(){
+        Diagnostics.event("menu.luna");
         if(Global.getCurrentState()==com.fs.starfarer.api.GameState.CAMPAIGN){
             Integer key=lunalib.lunaSettings.LunaSettings.getInt("lunalib","luna_SettingsKeybind_new");bridge.keyTap(key==null?Keyboard.KEY_F3:key);
         }else{
@@ -577,15 +622,20 @@ public final class SectorPadRuntime implements AutoCloseable {
         String dialogBody=confirmation!=null?confirmation.description():quantities.isActive()?quantities.status():"";
         String footer=prompt("UI","ui.confirm")+" Confirm   "+prompt("UI","ui.cancel")+" Cancel   "+prompt("UI","ui.nextTab")+" Next page";
         if(keyboard.isOpen())footer=prompt("UI","ui.confirm")+" Type   "+prompt("UI","ui.secondary")+" Erase   "+prompt("UI","ui.actions")+" Shift   "+prompt("UI","ui.previousTab")+"/"+prompt("UI","ui.nextTab")+" Caret   "+prompt("UI","game.menu")+" Accept   "+prompt("UI","ui.cancel")+" Cancel";
-        if(!hasModal())footer=prompt(context.name(),"hub.open")+" Command hub   View + Menu (hold) Recovery";
+        if(!hasModal())footer=mainMenuShortcutsAvailable()?"X Setup   Y Mod settings   R3 Keyboard   "+prompt("UI","hub.open")+" Hub":prompt(context.name(),"hub.open")+" Command hub   View + Menu (hold) Recovery";
         if(requireReconnectAck&&raw.connected())footer="Release controls, then A to reconnect. Keyboard and mouse remain available.";
         if(settings.isPreviewing()&&remapPanel==null)footer="Preview: "+(int)Math.ceil(settings.previewSecondsRemaining())+"s   Menu Keep   View Revert";
         if(remapPanel!=null)footer="Controller Setup owns input · Changes require confirmation";
         if(console.isOpen()&&!hasModal())footer=prompt("UI","ui.secondary")+" Keyboard   "+prompt("UI","ui.actions")+" Complete   "+prompt("UI","ui.confirm")+" Run command   "+prompt("UI","ui.cancel")+" Close";
         if(quantities.isActive())footer=prompt("UI","ui.cancel")+" / Escape Cancel";
         String banner=raw.connected()?context.label()+" · "+(campaignPointer?"Pointer":precision?"Precision":multiSelect?"Multi-select":"Controller"):
-            backend.status().startsWith("Controller backend unavailable")?"Controller input unavailable. See starsector.log for details.":"Connect an Xbox or Steam Deck-style controller · F10 Setup";
+            backend.status().startsWith("Controller backend unavailable")?"Controller input unavailable. See starsector.log for details.":"Waiting for gamepad · Handhelds: enable Gamepad mode · F10 Setup";
         if(recoveryOverride)banner="Recovery controls active · Enable SectorPad in Mod settings";
+        if(context.is("CAMPAIGN")&&raw.connected()&&!hasModal()){
+            banner=context.paused()?"Campaign paused · "+prompt("CAMPAIGN","campaign.pause")+" Resume · Left stick moves pointer"
+                :campaignPointer?"Campaign pointer mode · "+prompt("CAMPAIGN","campaign.pointerMode")+" Fleet controls"
+                :"Campaign travel · Left stick moves fleet · "+prompt("CAMPAIGN","campaign.pause")+" Pause";
+        }
         if(context.is("COMBAT")&&raw.connected())banner+=" · "+(game.isAutopilotOn()?"Autopilot":game.isPrecisionTargeting()?"Precision target":game.isTargetLocked()?"Target locked":"Manual aim");
         if(System.nanoTime()-lastStatus<5_000_000_000L)banner=status;
         List<String> diagnostics=prefs.diagnosticsEnabled?List.of("SECTORPAD / "+backend.status(),"Context: "+context.name()+" / "+context.label(),
@@ -615,6 +665,14 @@ public final class SectorPadRuntime implements AutoCloseable {
     }
     private String prompt(String context,String action){return ButtonLabels.label(settings.activeProfile().binding(context,action),settings.settings().glyphStyle,raw.deviceName());}
     private static String format(float value){return String.format(Locale.ROOT,"%.2f",value);}
+    private boolean mainMenuShortcutsAvailable(){
+        if(hasModal()||requireReconnectAck||!Display.isActive()||nativeSettingsOpen()||console.isOpen())return false;
+        Object state=StateAccess.currentState();
+        return Global.getCurrentState()==com.fs.starfarer.api.GameState.TITLE
+            && state instanceof com.fs.starfarer.title.TitleScreenState title
+            && !title.isShowingDialog()&&!title.isShowingCodex()&&title.getDialogType()==null
+            && ReadOnlyUiNavigator.modalIdentity(game.uiRoot())==null;
+    }
     private static boolean nativeSettingsOpen(){
         try{return lunalib.backend.ui.settings.LunaSettingsUIMainPanel.Companion.getPanelOpen();}
         catch(LinkageError unavailable){return true;}
@@ -630,9 +688,15 @@ public final class SectorPadRuntime implements AutoCloseable {
         if(remapPanel!=null){settings.revert("Controller Setup closed. Previous controls restored.");LunaRemappingPanel oldPanel=remapPanel;oldPanel.cancelCapture("Screen or input ownership changed.");OverlayHost.Handle handle=remapHandle;remapHandle=null;remapPanel=null;oldPanel.onClose();if(handle!=null)handle.close();}
         releasePause();textField=null;textCapture=null;
     }
-    private void releaseInputs(){bridge.releaseAll();game.neutralize();gate.disarm();scrolling.reset();zooming.reset();navigation.reset();latchedDrag=false;panning=false;pendingWheel=null;}
+    private void releaseInputs(){bridge.releaseAll();game.neutralize();gate.disarm();scrolling.reset();zooming.reset();navigation.reset();navigationDirection.reset();latchedDrag=false;panning=false;pendingWheel=null;}
     private void defer(Runnable action){deferredAction=action;deferredContext=context.identity();deferredControllerOwned=!physicalModalDispatch;}
-    public void emergencyStop(){game.invalidatePauseResume();cancelOverlays();releaseInputs();console.restore();backend.close();}
+    public void emergencyStop(){
+        closed=true;
+        FailureCleanup.run(failure->Diagnostics.error("runtime.cleanup",failure),
+            game::invalidatePauseResume,bridge::releaseAll,game::neutralize,gate::disarm,
+            ()->settings.revert("SectorPad encountered an error; previous controls restored."),
+            settings::close,this::cancelOverlays,this::releasePause,()->OverlayHost.get().detach(),console::restore,backend::close,bridge::close);
+    }
     public void notifyStatus(String value){status=value;lastStatus=System.nanoTime();}
     private static Set<String> pressed(Set<String> now,Set<String> before){Set<String> result=new HashSet<>(now);result.removeAll(before);return result;}
     private float controlAmount(String control){return "LT".equals(control)?calibrated.lt():"RT".equals(control)?calibrated.rt():calibrated.down(control)?1:0;}

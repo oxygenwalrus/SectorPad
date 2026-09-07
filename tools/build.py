@@ -119,7 +119,7 @@ def jar_tree(destination, source, prefix=''):
                 archive.writestr(info,p.read_bytes())
 
 
-PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md')
+PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md')
 SOURCE_VENDOR=('jamepad-2.30.0.0.jar','jamepad-2.30.0.0-sources.jar','jamepad-2.30.0.0.pom','gdx-jnigen-loader-2.2.0.jar','gamecontrollerdb-commit.txt')
 NATIVE_PAYLOADS=('windows-x86_64/jamepad64.dll','linux-x86_64/libjamepad64.so','windows-x86_64/sectorpad-input-windows-x86_64.dll')
 
@@ -133,7 +133,7 @@ def copy_public_docs(destination,design_history=False):
         source=ROOT/'docs'/directory
         if source.is_dir():
             for path in sorted(source.rglob('*')):
-                if path.is_file() and path.suffix.lower() in ('.png','.svg','.html'):
+                if path.is_file() and path.suffix.lower() in ('.png','.jpg','.svg','.html'):
                     target=destination/path.relative_to(ROOT/'docs');target.parent.mkdir(parents=True,exist_ok=True)
                     shutil.copy2(path,target)
 
@@ -149,7 +149,7 @@ def package_source():
         shutil.copytree(ROOT/directory,target/directory)
     (target/'tools').mkdir()
     for path in sorted((ROOT/'tools').glob('*.py')):shutil.copy2(path,target/'tools'/path.name)
-    for name in ('README.md','LICENSE','THIRD_PARTY_NOTICES.md','build.gradle','settings.gradle'):
+    for name in ('.gitignore','README.md','LICENSE','THIRD_PARTY_NOTICES.md','build.gradle','settings.gradle'):
         shutil.copy2(ROOT/name,target/name)
     copy_public_docs(target/'docs',design_history=True)
     (target/'vendor').mkdir()
@@ -224,11 +224,13 @@ def main():
     info={'mod':metadata['id'],'version':metadata['version'],'gameVersion':metadata['gameVersion'],
           'javaRelease':17,'sourceManifestSha256':source_digest,
           'controllerDatabaseSha256':hashlib.sha256((ROOT/'src/main/resources/sectorpad/gamecontrollerdb.txt').read_bytes()).hexdigest(),
-          'validation':'Automated checks passed. Physical controller and SteamOS acceptance remain unverified.'}
+          'validation':'Automated checks passed. See docs/COMPATIBILITY.md for recorded live and physical checks; full controller and SteamOS acceptance remain unverified.'}
     (release/'BUILD-INFO.json').write_text(json.dumps(info,indent=2)+'\n',encoding='utf-8')
     manifest=file_manifest(release)
     (build/'package-sha256.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     jar_tree(build/'SectorPad.zip',release,'SectorPad/')
+    (build/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256((build/name).read_bytes()).hexdigest()+'  '+name+'\n'
+        for name in ('SectorPad.zip','SectorPad-source.zip')),encoding='utf-8')
     print(f'Package built: {build / "SectorPad.zip"}')
     print(f'Source package built: {build / "SectorPad-source.zip"}')
     print('Game installation was not modified. Runtime/device certification is separate.')

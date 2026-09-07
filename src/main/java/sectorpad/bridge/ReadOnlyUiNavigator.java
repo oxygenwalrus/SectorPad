@@ -38,6 +38,7 @@ public final class ReadOnlyUiNavigator {
     private final List<NativeMapAdapter.Target> maps = new ArrayList<>();
     private Object currentRoot, focusRoot;
     private UIComponentAPI selected;
+    private float selectionPointerX=Float.NaN,selectionPointerY=Float.NaN;
     private String status="No active UI tree";
     private int visitedCount;
 
@@ -71,7 +72,7 @@ public final class ReadOnlyUiNavigator {
         Object modal=findTopModal(root,identitySet(),0);
         if(modal!=null) focusRoot=modal;
         visitedCount=0;
-        visit(focusRoot,null,false,identitySet(),0);
+        visit(focusRoot,null,identitySet(),0);
         if(candidates.stream().noneMatch(c->c.component()==selected)) selected=null;
         status=candidates.size()+" navigation targets"+(modal!=null ? "; modal bounds active" : "")+(visitedCount>=MAX_NODES ? "; tree limit reached" : "");
         return List.copyOf(candidates);
@@ -81,26 +82,44 @@ public final class ReadOnlyUiNavigator {
     public Candidate selected() { return candidates.stream().filter(c->c.component()==selected).findFirst().orElse(null); }
     public Object getFocusRoot() { return focusRoot; }
     public String getStatus() { return status; }
-    public void clearSelection() { selected=null; }
+    public void clearSelection() { selected=null; selectionPointerX=selectionPointerY=Float.NaN; }
 
     /** Selects a candidate geometrically; dx/dy use the game's bottom-left axes. */
     public Candidate move(int dx,int dy,float pointerX,float pointerY) {
         if(dx==0 && dy==0) return selected();
         Candidate origin=selected();
-        if(origin==null || !origin.contains(pointerX,pointerY)) {
+        // Keep logical focus through layout/scroll updates. Only actual pointer motion
+        // outside the selected control transfers ownership back to the mouse.
+        boolean pointerMoved=Float.isNaN(selectionPointerX)||Math.hypot(pointerX-selectionPointerX,pointerY-selectionPointerY)>3;
+        if(origin==null || (pointerMoved && !origin.contains(pointerX,pointerY))) {
             origin=candidates.stream().filter(c->c.contains(pointerX,pointerY)).min(java.util.Comparator.comparingDouble(c->c.width()*c.height())).orElse(null);
         }
         float fromX=origin==null ? pointerX : origin.centerX(), fromY=origin==null ? pointerY : origin.centerY();
-        Candidate best=null; double bestScore=Double.POSITIVE_INFINITY;
+        Candidate best=null; double bestScore=Double.POSITIVE_INFINITY; boolean bestAligned=false;
         for(Candidate candidate:candidates) {
             if(candidate==origin || candidate.component()==(origin==null?null:origin.component())) continue;
             double score=directionScore(fromX,fromY,candidate.centerX(),candidate.centerY(),dx,dy);
-            if(score<bestScore) { best=candidate; bestScore=score; }
+            if(!Double.isFinite(score))continue;
+            boolean aligned=origin!=null && (dx==0
+                ? Math.min(origin.x()+origin.width(),candidate.x()+candidate.width())>Math.max(origin.x(),candidate.x())
+                : Math.min(origin.y()+origin.height(),candidate.y()+candidate.height())>Math.max(origin.y(),candidate.y()));
+            if(aligned)score=dx==0?Math.abs(candidate.centerY()-fromY):Math.abs(candidate.centerX()-fromX);
+            if(best==null || (aligned&&!bestAligned) || (aligned==bestAligned && (score<bestScore || (score==bestScore && geometricOrder(candidate,best)<0)))) {
+                best=candidate; bestScore=score; bestAligned=aligned;
+            }
         }
         // If the pointer has no target and points past the entire UI, start at the nearest visible target.
         if(best==null && origin==null) best=candidates.stream().min(java.util.Comparator.comparingDouble(c->Math.hypot(c.centerX()-fromX,c.centerY()-fromY))).orElse(null);
+        // Reaching a known menu edge is consumed; do not also send a native arrow key.
+        if(best==null)best=origin;
         if(best!=null) selected=best.component();
+        selectionPointerX=pointerX;selectionPointerY=pointerY;
         return best;
+    }
+
+    private static int geometricOrder(Candidate a,Candidate b) {
+        int row=Float.compare(b.y(),a.y());
+        return row!=0?row:Float.compare(a.x(),b.x());
     }
 
     public boolean navigate(int dx,int dy,DesktopInputBridge bridge) {
@@ -112,6 +131,7 @@ public final class ReadOnlyUiNavigator {
         float x=pos.getCenterX(),y=pos.getCenterY();
         float revealDelta=target.scroller()!=null ? reveal(target) : 0f;
         bridge.movePointer(x,y+revealDelta);
+        selectionPointerX=bridge.getPointerX();selectionPointerY=bridge.getPointerY();
         return true;
     }
 
@@ -229,22 +249,25 @@ public final class ReadOnlyUiNavigator {
         return found;
     }
 
-    private void visit(Object node,ScrollPanelAPI nearestScroller,boolean row,Set<Object> visited,int depth) {
-        if(node==null || depth>MAX_DEPTH || !visited.add(node) || ++visitedCount>MAX_NODES || !visible(node)) return;
+    private void visit(Object node,ScrollPanelAPI nearestScroller,Set<Object> visited,int depth) {
+        if(node==null || depth>MAX_DEPTH || !visited.add(node) || ++visitedCount>MAX_NODES || !visible(node)
+                || Boolean.FALSE.equals(read(node,"isActive")) || Boolean.TRUE.equals(read(read(node,"getFader"),"isFadingOut"))) return;
         NativeMapAdapter.Target map=NativeMapAdapter.identify(node);
         if(map!=null) maps.add(map);
         if(node instanceof ScrollPanelAPI scroll) { nearestScroller=scroll; if(!scrollers.contains(scroll)) scrollers.add(scroll); }
-        int before=candidates.size();
-        boolean contentContainer=nearestScroller!=null && node==read(nearestScroller,"getContentContainer");
-        for(Object child:children(node)) visit(child,nearestScroller,contentContainer,visited,depth+1);
+        for(Object child:children(node)) visit(child,nearestScroller,visited,depth+1);
         if(node instanceof ButtonAPI button) {
             if(button.isEnabled() && !Boolean.FALSE.equals(read(node,"isClickable"))) add(button,button.getText(),nearestScroller);
         } else if(node instanceof TextFieldAPI field) {
-            add(field,"Text field",nearestScroller);
-        } else if(node instanceof UIComponentAPI component && (node.getClass().getName().endsWith("CargoStackView") || (row && candidates.size()==before))) {
-            PositionAPI position=component.getPosition();
-            if(position!=null && position.getWidth()>=16 && position.getHeight()>=12) add(component,label(node),nearestScroller);
+            if(!Boolean.FALSE.equals(read(node,"isEnabled")) && !Boolean.FALSE.equals(read(node,"isEditable"))
+                    && !Boolean.TRUE.equals(read(node,"isReadOnly"))) add(field,"Text field",nearestScroller);
+        } else if(node instanceof com.fs.starfarer.campaign.ui.trade.CargoStackView cargo && !cargo.isExpired()
+                && cargo.getStack()!=null && !cargo.getStack().isEmpty() && cargo.isEnabled()) {
+            PositionAPI position=cargo.getPosition();
+            if(position!=null && position.getWidth()>=16 && position.getHeight()>=12) add(cargo,label(node),nearestScroller);
         }
+        // Scroll containers also contain descriptions, headings and decorative rows. Membership
+        // in a scroll list does not prove an action exists; unknown custom rows retain pointer access.
     }
 
     private void add(UIComponentAPI component,String label,ScrollPanelAPI scroller) {
@@ -287,8 +310,8 @@ public final class ReadOnlyUiNavigator {
     }
     private static boolean visible(Object node) {
         if(node instanceof CustomPanelAPI panel && panel.getPlugin()!=null && panel.getPlugin().getClass().getName().startsWith("sectorpad.")) return false;
-        if(node instanceof UIComponentAPI component && component.getOpacity()<=0.01f) return false;
-        if(Boolean.FALSE.equals(read(node,"isVisible")) || Boolean.TRUE.equals(read(node,"isBeingDismissed"))) return false;
+        if(node instanceof UIComponentAPI component && (!Float.isFinite(component.getOpacity()) || component.getOpacity()<=0.01f)) return false;
+        if(Boolean.FALSE.equals(read(node,"isVisible")) || Boolean.TRUE.equals(read(node,"isBeingDismissed")) || Boolean.TRUE.equals(read(node,"isSlidOut"))) return false;
         Object fader=read(node,"getFader"), brightness=read(fader,"getBrightness");
         return !(brightness instanceof Number number) || number.floatValue()>0.01f;
     }

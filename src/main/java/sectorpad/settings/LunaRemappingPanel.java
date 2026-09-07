@@ -171,6 +171,11 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         if (capture.stage() == RemapCapture.Stage.READY) { draft = capture.result(); service.report(capture.message()); capture.reset(); dirty = true; }
     }
     @Override public void advance(float amount) {
+        if (closed || !sectorpad.game.RuntimeHooks.isEnabled()) return;
+        try { advancePanel(amount); }
+        catch (RuntimeException | LinkageError failure) { sectorpad.game.RuntimeHooks.fail("runtime.setup_advance", failure); }
+    }
+    private void advancePanel(float amount) {
         if (closed) return;
         service.advance();
         if (previewLastFrame && !service.isPreviewing()) { draft = service.committedProfile(); dirty = true; }
@@ -213,6 +218,11 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         else if (now - repeatAt >= 0) { select(direction.equals("UP") ? -1 : 1); repeatAt = now + (long) (service.settings().repeatInterval * 1_000_000_000L); }
     }
     @Override public void processInput(List<InputEventAPI> events) {
+        if (closed || !sectorpad.game.RuntimeHooks.isEnabled()) return;
+        try { processPanelInput(events); }
+        catch (RuntimeException | LinkageError failure) { sectorpad.game.RuntimeHooks.fail("runtime.setup_input", failure); }
+    }
+    private void processPanelInput(List<InputEventAPI> events) {
         if (closed) return;
         for (InputEventAPI event : events) {
             if (closed) { if (event.isKeyboardEvent() || event.isMouseEvent()) event.consume(); continue; }
@@ -264,6 +274,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     }
     private List<SetupTool> tools() {
         List<SetupTool> tools = new ArrayList<>();
+        tools.add(new SetupTool("Export diagnostic report", () -> service.report(sectorpad.diagnostics.Diagnostics.exportReport())));
         tools.add(new SetupTool("Save Luna calibration for this controller", () -> service.applyLunaCalibrationToDevice()));
         tools.add(new SetupTool("Restore standard controls", () -> { capture.reset(); draft = BindingProfile.defaults(); service.preview(draft); }));
         tools.add(new SetupTool("Duplicate committed profile", () -> { draft = service.duplicateCurrentProfile(); profilesMode = toolsMode = false; }));

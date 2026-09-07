@@ -18,6 +18,8 @@ public final class GameIntegrationTests {
     private static void near(float actual, float expected, String message) { check(Math.abs(actual - expected) < .001f, message + ": " + actual); }
 
     public static void main(String[] args) {
+        System.setProperty("log4j.defaultInitOverride", "true");
+        org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
         near(SteeringMath.angleError(2, 358), 4, "heading wraps across zero");
         near(SteeringMath.angleError(358, 2), -4, "heading wraps in reverse");
         near(SteeringMath.local(1, 0, 90).left(), -1, "world right is local right when facing up");
@@ -33,6 +35,7 @@ public final class GameIntegrationTests {
         testNativeCommandRules();
         testEncounterCoreNavigation();
         testEncounterMapContext();
+        testCollapsedCampaignContext();
         testSelectedTacticalOrders();
         try { NativeGameUi.verifySignatures(); check(true, "native public command, core, cargo, and warroom signatures resolve"); }
         catch (ReflectiveOperationException unavailable) { throw new AssertionError("Installed native command signatures changed", unavailable); }
@@ -328,6 +331,44 @@ public final class GameIntegrationTests {
         check(detector.detect().is("UI"), "other core tabs retain menu controls");
     }
 
+    private static void testCollapsedCampaignContext() {
+        Fixture f = new Fixture(); f.state = GameState.CAMPAIGN; f.paused = true; f.install();
+        NativeFixture nativeUi = new NativeFixture(f.member);
+        nativeUi.core = new Object(); nativeUi.modal = nativeUi.core;
+        boolean[] collapsed = { true };
+        GameContextDetector detector = new GameContextDetector(() -> null, () -> nativeUi.modal,
+                ui -> nativeUi.core, owner -> owner == nativeUi.core && collapsed[0]);
+        GameContext campaign = detector.detect();
+        check(campaign.is("CAMPAIGN") && campaign.gameplayAllowed() && campaign.paused(),
+                "collapsed native HUD permits campaign controls and its pause binding even while paused");
+        f.paused = false;
+        check(detector.detect().is("CAMPAIGN"), "unpaused campaign retains fleet movement controls");
+        nativeUi.modal = new Object();
+        check(detector.detect().is("UI"), "nested native modal above collapsed core blocks fleet movement");
+        nativeUi.modal = nativeUi.core; f.dialogShowing = true;
+        check(detector.detect().is("UI"), "native help/dialog flag blocks even when modal scanner reports the core");
+        f.dialogShowing = false; f.menuShowing = true;
+        check(detector.detect().is("UI"), "game menu blocks collapsed core exemption");
+        f.menuShowing = false; f.dialog = proxy(InteractionDialogAPI.class, call -> null);
+        check(detector.detect().is("UI"), "interaction dialog remains protected even before its boolean flag updates");
+        f.dialog = null; f.tab = CoreUITabId.CARGO;
+        check(detector.detect().is("UI"), "cargo tab still owns input with a stale collapsed snapshot");
+        f.tab = CoreUITabId.MAP;
+        check(detector.detect().is("MAP"), "map tab retains map bindings rather than fleet movement");
+        f.tab = null; collapsed[0] = false;
+        check(detector.detect().is("UI"), "expanded/custom/fading core with no standard tab remains UI");
+        check(!detector.detect().identity().equals(campaign.identity()), "collapsed/expanded ownership changes rearm input");
+        check(!GameContextDetector.isCollapsedCampaignCore(new Object()), "unrecognized core class cannot bypass modal protection");
+        check(!GameContextDetector.isCollapsedCampaignCore(null), "absent core cannot satisfy collapsed native proof");
+        try {
+            Class<?> core = com.fs.starfarer.ui.newui.L.class;
+            check(core.getMethod("isCampaignUI").getReturnType() == boolean.class
+                    && core.getMethod("getCurrentTabId").getReturnType() == Object.class
+                    && core.getMethod("getCurrentTab").getReturnType() == com.fs.starfarer.ui.interfacenew.class,
+                    "installed native core exposes the exact read-only collapsed-state signatures");
+        } catch (ReflectiveOperationException unavailable) { throw new AssertionError("Native campaign HUD getter signatures changed", unavailable); }
+    }
+
     private static final class NativeFixture extends NativeGameUi {
         boolean create = true, direct = true, freeRetreat, operation;
         Object core, modal, warroomOwner = new Object();
@@ -358,7 +399,7 @@ public final class GameIntegrationTests {
     private record Command(ShipCommand type, Object point, int group) {}
     private static final class Fixture {
         GameState state = GameState.COMBAT;
-        boolean paused, autopilot, shieldOn, dialogShowing, followingDirect, commandUi, fullRetreat;
+        boolean paused, autopilot, shieldOn, dialogShowing, menuShowing, followingDirect, commandUi, fullRetreat;
         boolean assignmentUsesCost, retreatUsesCost;
         boolean visible = true, abilityUsable = true;
         int disableControls, abilityPresses, recentered;
@@ -470,6 +511,7 @@ public final class GameIntegrationTests {
             case "getCurrentInteractionDialog" -> dialog;
             case "showCoreUITab" -> { tab = (CoreUITabId) call.args()[0]; yield null; }
             case "isShowingDialog" -> dialogShowing;
+            case "isShowingMenu" -> menuShowing;
             case "setFollowingDirectCommand" -> { followingDirect = (Boolean) call.args()[0]; yield null; }
             case "getZoomFactor" -> zoom;
             case "getMinZoomFactor" -> .1f;

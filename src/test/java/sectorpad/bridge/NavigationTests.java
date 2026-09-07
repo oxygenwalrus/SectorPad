@@ -14,8 +14,9 @@ public final class NavigationTests {
     public static void main(String[] args) {
         modalAndVisibility();
         directionalGeometry();
+        stableRowsAndEdges();
         textCommitValidation();
-        System.out.println("NavigationTests: 3 modal, geometry and text scenarios passed");
+        System.out.println("NavigationTests: 4 modal, geometry, stable navigation and text scenarios passed");
     }
 
     private static void modalAndVisibility() {
@@ -45,6 +46,23 @@ public final class NavigationTests {
         root.children.add(top); root.children.add(bottom);
         ReadOnlyUiNavigator navigator=new ReadOnlyUiNavigator(); navigator.refresh(root);
         check(navigator.move(0,-1,10,110).component()==bottom,"Dpad down follows bottom-left UI coordinates");
+    }
+
+    private static void stableRowsAndEdges() {
+        AtomicInteger writes=new AtomicInteger();Panel root=new Panel();
+        ButtonAPI top=button("Top",0,200,true,writes), middle=button("Middle",0,130,true,writes), bottom=button("Bottom",0,60,true,writes);
+        ButtonAPI beside=button("Other column",50,180,true,writes);
+        root.children.addAll(List.of(beside,bottom,top,middle));
+        ReadOnlyUiNavigator navigator=new ReadOnlyUiNavigator();navigator.refresh(root);
+        check(navigator.move(0,-1,20,210).component()==middle,"Down stays in its column rather than jumping to a closer diagonal");
+        navigator.refresh(root);
+        check(navigator.move(0,-1,20,210).component()==bottom,"A pending cursor update cannot reset logical focus to the previous row");
+        check(navigator.move(0,-1,20,70).component()==bottom,"A menu edge retains focus rather than falling through to native arrows");
+        check(navigator.move(0,1,20,70).component()==middle,"Up reverses along the same column");
+        check(navigator.move(0,-1,70,190).component()==middle,"Explicit pointer movement outside focus transfers navigation origin");
+        root.children.remove(bottom);navigator.refresh(root);
+        check(navigator.getCandidates().stream().noneMatch(c->c.component()==bottom),"Removed controls cannot remain navigation targets");
+        check(writes.get()==0,"Directional focus leaves native controls unchanged");
     }
 
     private static void textCommitValidation() {

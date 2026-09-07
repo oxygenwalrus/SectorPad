@@ -10,6 +10,11 @@ import java.util.Locale;
 
 public final class SectorPadModPlugin extends BaseModPlugin {
     @Override public void onApplicationLoad() {
+        try { applicationLoad(); }
+        catch (RuntimeException | LinkageError failure) { RuntimeHooks.fail("runtime.application_load", failure); }
+    }
+
+    private void applicationLoad() {
         for (ModSpecAPI mod : Global.getSettings().getModManager().getEnabledModsCopy()) {
             String id = mod.getId().toLowerCase(Locale.ROOT);
             if (id.equals("ssmscontroller") || id.equals("ssmscontrollerex") || id.equals("ssms_controller")) {
@@ -23,6 +28,11 @@ public final class SectorPadModPlugin extends BaseModPlugin {
 
     @Override public void onGameLoad(boolean newGame) {
         if (!RuntimeHooks.isEnabled()) return;
+        try { gameLoad(); }
+        catch (RuntimeException | LinkageError failure) { RuntimeHooks.fail("runtime.game_load", failure); }
+    }
+
+    private void gameLoad() {
         SectorPadRuntime.get().onGameLoad();
         SectorPadCampaignFrame.install(Global.getSector());
         var listeners = Global.getSector().getListenerManager();

@@ -3,6 +3,7 @@ package sectorpad.input;
 import com.studiohartman.jamepad.*;
 import sectorpad.core.PadFrame;
 import sectorpad.core.InputMath;
+import sectorpad.diagnostics.Diagnostics;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -13,9 +14,15 @@ public final class SdlBackend implements AutoCloseable {
     private int instance=-1;
     private boolean ltDown,rtDown;
     private String status="Not initialized";
-    private String reportedFailure="";
     private long retryAt;
+    private boolean retryPending;
     private int requestedIndex=-1;
+    private final ControllerDiscovery discovery=new ControllerDiscovery();
+    private final ControllerDiscovery.Slots slots=new ControllerDiscovery.Slots(){
+        public boolean connected(int slot){return manager.getControllerIndex(slot).isConnected();}
+        public int instance(int slot)throws ControllerUnpluggedException{return manager.getControllerIndex(slot).getDeviceInstanceID();}
+        public void reconnect(int slot){manager.getControllerIndex(slot).reconnectController();}
+    };
     private final String standaloneNativeRoot;
     public SdlBackend(){this(null);}
     public SdlBackend(String standaloneNativeRoot){this.standaloneNativeRoot=standaloneNativeRoot;}
@@ -25,28 +32,31 @@ public final class SdlBackend implements AutoCloseable {
         ControllerButton.DPAD_DOWN,ControllerButton.DPAD_LEFT,ControllerButton.DPAD_RIGHT};
     private static final String[] BUTTON_NAMES={"A","B","X","Y","LB","RB","VIEW","MENU","L3","R3",
         "DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"};
-    public void selectDevice(int index){if(index!=requestedIndex){requestedIndex=index;selected=-1;instance=-1;}}
+    public synchronized void selectDevice(int index){
+        int valid=index>=0&&index<ControllerDiscovery.LIMIT?index:-1;
+        if(valid!=requestedIndex){requestedIndex=valid;selected=-1;instance=-1;ltDown=rtDown=false;discovery.reset();}
+    }
     public synchronized PadFrame poll(long now) {
         try {
             if(manager==null) {
-                if(now<retryAt)return PadFrame.disconnected();
+                if(retryPending&&now-retryAt<0)return PadFrame.disconnected();
                 if(standaloneNativeRoot==null)ModNativeLoader.load(ModNativeLoader.sdlFile());
                 else ModNativeLoader.loadFromDirectory(standaloneNativeRoot,ModNativeLoader.sdlFile());
-                Configuration c=new Configuration();c.useRawInput=false;c.maxNumControllers=8;
+                Configuration c=new Configuration();c.useRawInput=false;c.maxNumControllers=ControllerDiscovery.LIMIT;
                 c.loadNativeLibrary=false;c.loadDatabaseInMemory=true;
                 ControllerManager candidate=new ControllerManager(c,"/sectorpad/gamecontrollerdb.txt");
                 manager=candidate;candidate.initSDLGamepad();
-                if(standaloneNativeRoot==null)com.fs.starfarer.api.Global.getLogger(SdlBackend.class).info("SectorPad SDL backend initialized from mod-local native library");
+                retryPending=false;
+                if(standaloneNativeRoot==null)Diagnostics.event("backend.ready");
             }
             manager.update();
-            if(selected<0 || !manager.getControllerIndex(selected).isConnected()) {
-                selected=-1;
-                for(int i=0;i<8;i++) {
-                    if(requestedIndex>=0 && i!=requestedIndex)continue;
-                    if(manager.getControllerIndex(i).isConnected()){selected=i;break;}
-                }
+            selected=discovery.select(now,requestedIndex,slots);
+            if(selected<0){
+                instance=-1;ltDown=rtDown=false;
+                status=requestedIndex<0?"SDL ready; waiting for a controller (automatic discovery)":
+                    "SDL ready; waiting for selected device "+(requestedIndex+1);
+                return PadFrame.disconnected();
             }
-            if(selected<0){status="SDL ready; connect a controller";return PadFrame.disconnected();}
             ControllerIndex c=manager.getControllerIndex(selected);
             int id=c.getDeviceInstanceID();
             if(id!=instance){instance=id;ltDown=rtDown=false;}
@@ -62,14 +72,13 @@ public final class SdlBackend implements AutoCloseable {
             String name=c.getName();status="SDL / "+name+" / device "+(selected+1);
             return new PadFrame(true,"sdl:"+name+":"+id,name,independent,lx,ly,rx,ry,lt,rt,buttons);
         } catch(ControllerUnpluggedException ex) {
-            selected=-1;status="Controller disconnected";return PadFrame.disconnected();
+            selected=-1;instance=-1;ltDown=rtDown=false;discovery.reset();
+            status="Controller disconnected; automatic discovery continues";return PadFrame.disconnected();
         } catch(LinkageError | RuntimeException ex) {
             status="Controller backend unavailable: "+ex.getClass().getSimpleName()+": "+ex.getMessage();
-            if(standaloneNativeRoot==null&&!status.equals(reportedFailure)){
-                reportedFailure=status;com.fs.starfarer.api.Global.getLogger(SdlBackend.class).error("SectorPad controller backend initialization failed",ex);
-            }
-            retryAt=now+5_000_000_000L;
-            close();return PadFrame.disconnected();
+            if(standaloneNativeRoot==null)Diagnostics.error("backend.failed",ex);
+            close();retryAt=now+5_000_000_000L;retryPending=true;
+            return PadFrame.disconnected();
         }
     }
     private static float axis(ControllerIndex c,ControllerAxis axis)throws ControllerUnpluggedException {
@@ -77,5 +86,12 @@ public final class SdlBackend implements AutoCloseable {
     }
     public String status(){return status;}
     public static float upAxis(float nativeValue){return -InputMath.finite(nativeValue,-1,1);}
-    @Override public synchronized void close(){if(manager!=null){try{manager.quitSDLGamepad();}catch(RuntimeException|LinkageError ignored){}manager=null;}selected=-1;instance=-1;}
+    @Override public synchronized void close(){
+        if(manager!=null){
+            try{manager.quitSDLGamepad();}
+            catch(RuntimeException|LinkageError failure){if(standaloneNativeRoot==null)Diagnostics.error("backend.close_failed",failure);}
+            manager=null;
+        }
+        selected=-1;instance=-1;ltDown=rtDown=false;retryPending=false;discovery.reset();
+    }
 }

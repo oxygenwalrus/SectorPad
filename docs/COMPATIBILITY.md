@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.0.0`, dated **7 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. No physical controller was available for this build. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.0.1`, dated **7 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -10,7 +10,7 @@ The inspected installation is Starsector **0.98a-RC8**, running 64-bit Java 17, 
 | --- | --- | --- |
 | Build and static integration | Java compilation against the installed game/dependency APIs; Windows JNI compilation with warnings treated as errors | Successful compilation does not validate a complete game journey |
 | Automated behavior | Headless suites cover routing, neutral/release gates, pointer accumulation, UI delivery sequencing, navigation, settings validation, previews, storage recovery, and adapter logic | These use controlled inputs and fixtures, not a physical gamepad |
-| SDL backend | Packaged native library initializes inside the isolated Windows game; passive controller probe runs | No connected controller was available to verify axes, buttons, simultaneous triggers, or hotplug |
+| SDL backend | Connected XInput controller enumerates immediately in the standalone probe and isolated game; independent trigger axes are advertised. A 60-second observation recorded neutral stick/trigger state | No button presses, trigger movement or hotplug occurred in that observation; operation and handheld mode switching remain unverified |
 | Windows input backend | Mod-local JNI loads under the normal script restrictions; passive observer lifecycle checks pass | Live physical/synthetic overlap, keyboard layout, and focus-loss behavior still require device acceptance |
 | Added UI | Native Luna settings and Controller Setup mounted in title, campaign, cargo and refit. TriPad hub/keyboard were visually checked at 1280×800 and 1280×720; quantity entry at 800p. At 720p, overlay scale 1.8 retained console clearance and correct keyboard hits. The corrected combat hub and setup panel were checked over the native HUD/deployment picker, including setup navigation and close. Hints hide while native Luna settings is open | Keyboard/mouse operation on Windows; physical handheld readability and every third-party mount path remain unverified. These fit checks concern SectorPad panels; the original game's UI retains its own sizing |
 | Native mouse and text delivery | Hub → Select opened the original New Game button. Staged character text was applied to the captured original name field after focus moved | General scrolling, dragging and mixed physical/controller ownership need live device checks |
@@ -29,7 +29,19 @@ The verification launcher uses an isolated copied game with separate mods, saves
 
 Startup logs contain two ship-data loader errors for `flare` and `module_hightech_decor`. The same records occur in the removed-mod baseline, where SectorPad is absent. The final combat and maximum-scale sessions produced no additional error/fatal records or SectorPad runtime-failure records. Original ship data was not changed to suppress these existing messages.
 
-## Input and platform boundaries
+## 1.0.1 diagnostics and campaign correction
+
+The user reported working controller buttons, followed by pointer movement and a nonfunctional X pause binding after campaign load. Live inspection reproduced the open campaign being labelled "Campaign menu". The generic modal scanner was finding the persistent native core HUD, which inherits the game's dialog class even when its tabs are closed. The correction exempts only that exact owner when public methods confirm it is a collapsed campaign core; actual dialog/menu flags, encounters and nested modals still block fleet control. The updated live game now shows [Campaign paused with X Resume](evidence/campaign-controller-paused-1.0.1.jpg), and reports both dialog flags false, no core tab, and a collapsed core. Ordinary save loading resets the input clock rather than requesting disconnect acknowledgement.
+
+Startup testing also exposed a disagreement between LWJGL focus and the Windows foreground process. This previously produced repeated "observer stopped" warnings. Native ABI 2 adds an authoritative foreground check, with bounded error logging and retry delays. The corrected launch and campaign load produced neither the warning flood nor additional loader errors beyond the two known baseline records.
+
+New tests cover 15 discovery scenarios, 41 diagnostic checks and 11 main-menu/cleanup checks. Expanded suites pass 17 input bridge scenarios, 110 game integration checks and 2,828 settings assertions. The user then physically tested the corrected game and confirmed that X toggles pause and the fleet follows stick movement. That confirms those campaign controls on this connected Windows controller; it does not certify every binding or handheld.
+
+A controlled console call into SectorPad's failure boundary disabled its callbacks, ran cleanup and automatically exported diagnostics through the game's common-data API. The report recorded version 1.0.1, game version 0.98a-RC8, disabled runtime and the intentional RuntimeException type. The existing console closed normally with Escape afterward and the native campaign remained available. This checks the mod's failure boundary, not a fatal native/JVM crash. The synthetic exception's one error trace is intentional test output.
+
+The user also reported bouncing D-pad navigation and focus on plain text. Discovery no longer guesses that arbitrary scroll-content rows are actionable. Navigation prioritizes controls in the current row/column, retains logical focus through pointer/layout updates, and consumes a known menu edge instead of also sending a native arrow. A stable cardinal direction prevents a diagonal roll from generating extra immediate steps. Thirteen actionable-target checks, four navigation scenario groups and 11 direction/repeat checks cover these cases; physical D-pad acceptance of this correction remains pending.
+
+## Input ownership
 
 SectorPad owns an SDL controller manager, mod-local native files, game callbacks, and its added panels. It does not replace the global LWJGL Mouse/Keyboard implementation or the game's classes. The library loader calls `System.load` on explicit native paths inside the mod. Runtime persistence uses the public common-data API. UI discovery uses public methods and `MethodHandles.publicLookup`; it does not enable private access, bypass the script classloader, or alter game security settings.
 

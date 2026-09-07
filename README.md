@@ -2,7 +2,7 @@
 
 SectorPad adds controller input, a command hub, an on-screen keyboard, and LunaLib remapping to Starsector. It uses SDL gamepad mappings for standard Xbox-style controls and Steam Deck-style layouts. It adds its own panels and adapts existing public game operations; it does not install replacements for the game's UI classes, LWJGL input implementation, JVM, or native libraries.
 
-**Validation status, 7 September 2026:** the mod builds and passes its automated checks. Isolated Windows game tests cover character text entry, exact cargo pickup/cancellation, profile persistence and rollback, wheel customization, native tactical orders, autopilot toggling, and Console layout/text entry. These live tests used keyboard and mouse to operate SectorPad. No physical controller was available, so controller flight, mixed input and SteamOS operation remain unverified. The package version `1.0.0` is an identifier, not hardware or production certification. See [compatibility and evidence](docs/COMPATIBILITY.md).
+**Validation status, 7 September 2026:** the mod builds and passes its automated checks. Isolated Windows game tests cover character text entry, exact cargo pickup/cancellation, profile persistence and rollback, wheel customization, native tactical orders, autopilot toggling, Console layout/text entry and controlled failure cleanup/export. These journeys used keyboard and mouse. A connected XInput controller is detected at startup, and the user confirmed physical X pause/unpause and campaign fleet movement after the context fix. Controller combat, mixed input and SteamOS operation remain unverified. The package version `1.0.1` is an identifier, not hardware or production certification. See [compatibility and evidence](docs/COMPATIBILITY.md).
 
 ## Install and open
 
@@ -21,6 +21,10 @@ SectorPad adds controller input, a command hub, an on-screen keyboard, and LunaL
 5. Connect the controller, release every control and center both sticks, then acknowledge the reconnect prompt with **A**. Choose the active device, profile, and comfort settings through LunaLib or Controller Setup.
 
 Keep the keyboard and mouse available during initial testing. Controller Setup and the command hub are usable without a controller. Installation is confined to the new mod directory and the normal launcher selection; no base-game patch or security-setting change is required.
+
+On the unobstructed main menu, **X opens Controller Setup, Y opens LunaLib Mod Settings, and R3 opens the keyboard**. These shortcuts need no function keys. SectorPad detects controllers independently of keyboard/mouse use and rescans disconnected slots once per second. On a ROG Ally, enable its embedded controller and use a Gamepad configuration for Starsector; SectorPad cannot enable a device hidden by system software.
+
+For troubleshooting, choose **Export diagnostics** in the command hub or Controller Setup's Tools section. The bounded local report records runtime versions, connection/focus/context transitions and error types without typed text or save data. SectorPad also logs throttled errors to `starsector.log`; callback failures stop its input, attempt cleanup independently, and export a report automatically. See [handheld setup and diagnostics](docs/HANDHELDS_AND_DIAGNOSTICS.md).
 
 ## Standard controls
 

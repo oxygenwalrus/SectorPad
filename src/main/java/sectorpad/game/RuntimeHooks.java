@@ -3,6 +3,7 @@ package sectorpad.game;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.input.InputEventAPI;
 import sectorpad.SectorPadRuntime;
+import sectorpad.diagnostics.Diagnostics;
 import java.util.List;
 
 /** Shared boundary for lifecycle errors. A failed addon must leave the original input path available. */
@@ -26,7 +27,10 @@ public final class RuntimeHooks {
     public static void disable(String reason) {
         enabled = false;
         unavailableReason = reason;
-        Global.getLogger(RuntimeHooks.class).warn("SectorPad disabled: " + reason);
+        Diagnostics.state("runtime", "disabled");
+        Diagnostics.event("runtime.disabled");
+        try { Global.getLogger(RuntimeHooks.class).warn("SectorPad disabled: " + reason); }
+        catch (RuntimeException | LinkageError ignored) { }
     }
 
     public static void beforeInput(List<InputEventAPI> events) {
@@ -34,18 +38,16 @@ public final class RuntimeHooks {
         if (events == null) events = List.of();
         // Controller overlay selection does not emit native clicks/keys. Any such event can be an
         // independent pause or modal intention; conservatively give up automatic resume ownership.
+        try {
         if (events != null) for (InputEventAPI event : events) {
             if (!event.isConsumed() && (event.isKeyDownEvent() || event.isMouseDownEvent())) {
                 GameActions.notifyExternalPauseIntent();
                 break;
             }
         }
-        try {
             dispatchInput(LIVE, events);
         } catch (RuntimeException | LinkageError failure) {
-            Global.getLogger(RuntimeHooks.class).error("SectorPad runtime input failed", failure);
-            stopAfterFailure();
-            disable("Controller input failed; check starsector.log");
+            fail("runtime.input", failure);
         }
     }
 
@@ -61,9 +63,7 @@ public final class RuntimeHooks {
         if (!enabled) return;
         try { LIVE.advance(); LIVE.ensureAttached(); }
         catch (RuntimeException | LinkageError failure) {
-            Global.getLogger(RuntimeHooks.class).error("SectorPad campaign frame failed", failure);
-            stopAfterFailure();
-            disable("Controller frame update failed; check starsector.log");
+            fail("runtime.frame", failure);
         }
     }
 
@@ -83,14 +83,21 @@ public final class RuntimeHooks {
             if (combat && SectorPadRuntime.get().hasModal()) OverlayHost.inUiCoordinates(NativeCombatCursor::redrawIfSoftwareActive);
         }
         catch (RuntimeException | LinkageError failure) {
-            Global.getLogger(RuntimeHooks.class).error("SectorPad runtime rendering failed", failure);
-            stopAfterFailure();
-            disable("Controller overlay failed; check starsector.log");
+            fail("runtime.render", failure);
         }
     }
 
     private static void stopAfterFailure() {
         try { SectorPadRuntime.get().emergencyStop(); }
-        catch (RuntimeException | LinkageError cleanupFailure) { Global.getLogger(RuntimeHooks.class).error("SectorPad emergency cleanup failed", cleanupFailure); }
+        catch (RuntimeException | LinkageError cleanupFailure) { Diagnostics.error("runtime.cleanup_boundary", cleanupFailure); }
+    }
+
+    /** Only SectorPad callbacks are isolated; no global JVM handler or another mod is replaced. */
+    public static void fail(String phase, Throwable failure) {
+        if (!enabled) return;
+        disable("Controller addon stopped after an error; check starsector.log and SectorPad diagnostics.");
+        Diagnostics.error(phase, failure);
+        stopAfterFailure();
+        Diagnostics.exportReport();
     }
 }

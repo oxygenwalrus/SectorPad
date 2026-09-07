@@ -2,7 +2,7 @@
   "id": "sectorpad",
   "name": "SectorPad",
   "author": "SectorPad contributors",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Additive Xbox and Steam Deck-style controller controls, radial menus, text entry, and LunaLib remapping.",
   "gameVersion": "0.98a-RC8",
   "utility": true,

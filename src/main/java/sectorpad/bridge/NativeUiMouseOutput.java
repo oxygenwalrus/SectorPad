@@ -22,6 +22,8 @@ final class NativeUiMouseOutput implements DesktopInputBridge.Output {
     NativeUiMouseOutput(DesktopInputBridge.Output keyboard,DesktopInputBridge.Surface surface){this(keyboard,surface,new GamePort());}
     NativeUiMouseOutput(DesktopInputBridge.Output keyboard,DesktopInputBridge.Surface surface,Port port){this.keyboard=keyboard;this.surface=surface;this.port=port;}
     @Override public void observe(boolean active){if(!active)releaseUi();keyboard.observe(active);}
+    @Override public boolean acceptsFocus(){return keyboard.acceptsFocus();}
+    @Override public boolean isOperational(){return keyboard.isOperational();}
     @Override public boolean isPhysicalKeyDown(int key){return keyboard.isPhysicalKeyDown(key);}
     @Override public boolean isPhysicalMouseDown(int button){return keyboard.isPhysicalMouseDown(button);}
     @Override public long keyReleaseSequence(int key){return keyboard.keyReleaseSequence(key);}

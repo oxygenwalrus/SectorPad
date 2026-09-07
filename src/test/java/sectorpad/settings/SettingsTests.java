@@ -16,6 +16,9 @@ import java.util.Set;
 public final class SettingsTests {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        // Failure fixtures exercise diagnostics without opening the game's file appender.
+        System.setProperty("log4j.defaultInitOverride", "true");
+        org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
         profiles(); tuning(); capture(); calibration(); persistence(); commonStorage(); preview(); wheelLayouts(); sectionResets();
         if (args.length > 0) csv(Path.of(args[0]));
         System.out.println("SettingsTests: " + assertions + " assertions passed (headless; no game/controller claim).");
@@ -161,6 +164,13 @@ public final class SettingsTests {
         service.preview(BindingProfile.southpaw()); service.setDevice("xbox-controller");
         check(!service.isPreviewing(), "Device replacement cancels active preview");
         service.preview(BindingProfile.southpaw()); service.close(); check(!service.isPreviewing(), "Shutdown cancels uncommitted mapping");
+        SettingsService brokenClose = new SettingsService(new ProfileStore(Files.createTempDirectory("sectorpad-close-test-")), new MutableSource(), () -> time[0]);
+        brokenClose.initialize(); brokenClose.preview(BindingProfile.southpaw());
+        brokenClose.setListener((prefs, profile) -> { throw new IllegalStateException("Failing input owner"); });
+        try { brokenClose.close(); throw new AssertionError("Expected failing rollback owner"); }
+        catch (IllegalStateException expected) { check(!brokenClose.isPreviewing(), "Failed shutdown callback still clears the preview"); }
+        brokenClose.preview(BindingProfile.southpaw()); brokenClose.close();
+        check(!brokenClose.isPreviewing(), "Failed close detaches the broken callback before later cleanup");
         Path occupied = Files.createTempFile("sectorpad-storage-failure-", ".file"); SettingsService failing = new SettingsService(new ProfileStore(occupied), new MutableSource(), () -> time[0]); failing.initialize();
         failing.preview(change); check(!failing.confirm() && failing.committedProfile().equals(BindingProfile.defaults()), "Write failure never changes committed controls");
         time[0] += SettingsService.PREVIEW_NANOS; failing.advance(); check(!failing.isPreviewing(), "Failed commit still times out safely");

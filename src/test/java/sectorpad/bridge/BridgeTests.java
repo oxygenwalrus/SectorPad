@@ -9,6 +9,9 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Standalone headless tests; never construct Robot, native hooks, or a game window. */
 public final class BridgeTests {
     public static void main(String[] args) {
+        // Injected failures exercise production diagnostics, without activating the game's file appender.
+        System.setProperty("log4j.defaultInitOverride", "true");
+        org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
         pacedTaps();
         tapAndDirectOwnership();
         physicalOverlap();
@@ -21,7 +24,12 @@ public final class BridgeTests {
         pointerTransform();
         fractionalPointerAndHandoff();
         unsupportedAndCapacity();
-        System.out.println("BridgeTests: 12 lifecycle and coordinate scenarios passed");
+        failedReleaseIsolation();
+        failedOutputClose();
+        authoritativeForeground();
+        observerRetry();
+        stoppedObserverRecovery();
+        System.out.println("BridgeTests: 17 lifecycle and coordinate scenarios passed");
     }
 
     private static void pacedTaps() {
@@ -189,6 +197,80 @@ public final class BridgeTests {
         check(surface.x==300,"A context transition cannot retain fractions from the preceding UI");
     }
 
+    private static void failedReleaseIsolation() {
+        for (boolean linkage : new boolean[] { false, true }) {
+            Fixture f = new Fixture();
+            f.bridge.keyDown(30); f.bridge.keyDown(31); f.bridge.mouseDown(0); f.bridge.mouseDown(1);
+            f.output.failedReleaseKey = 30; f.output.failedReleaseMouse = 0; f.output.linkageFailure = linkage;
+            f.bridge.releaseAll();
+            check(f.output.events.contains("m1-") && f.output.events.contains("k31-"), "Failed mouse/key release must not skip other owned releases");
+            check(f.bridge.heldCount() == 2, "Failed release remains owned for cleanup retry");
+            f.bridge.close();
+            check(f.output.closeCalls == 1, "Native output close must still run after failed release retries");
+            check(!f.bridge.pump(true, "ui"), "Failed cleanup cannot rearm a closed bridge");
+            f.bridge.close();
+            check(f.output.closeCalls == 1, "Closing a failed bridge is idempotent");
+        }
+    }
+
+    private static void failedOutputClose() {
+        for (boolean linkage : new boolean[] { false, true }) {
+            Fixture f = new Fixture(); f.bridge.keyDown(30);
+            f.output.closeFailure = true; f.output.linkageFailure = linkage;
+            f.bridge.close();
+            check(f.output.events.contains("k30-"), "Input releases precede an output close failure");
+            check(!f.bridge.pump(true, "ui") && !f.bridge.isAvailable(), "Output close failure is contained and leaves bridge closed");
+            f.bridge.close(); check(f.output.closeCalls == 1, "Failed output close does not recur each frame");
+        }
+    }
+
+    private static void authoritativeForeground() {
+        Fixture f = new Fixture(); f.bridge.keyDown(30); f.bridge.mouseDown(0);
+        check(f.bridge.hasGameFocus(), "Direct game actions accept matching surface and native foreground");
+        f.output.acceptsFocus = false;
+        check(!f.bridge.hasGameFocus(), "Direct game actions reject native foreground mismatch before a bridge pump");
+        check(!f.pump(), "Native foreground mismatch must suspend even while LWJGL reports active");
+        check(f.bridge.heldCount() == 0, "Authoritative foreground loss releases held input");
+        int activations = f.output.activationCalls;
+        for (int i = 0; i < 1_000; i++) f.pump();
+        check(f.output.activationCalls == activations, "Foreground mismatch must not repeatedly activate observer");
+        f.bridge.mouseClick(0); f.bridge.keyDown(31);
+        check(f.bridge.pendingCount() == 0 && !f.output.events.contains("k31+"), "Native foreground loss cannot queue or emit input");
+        f.output.acceptsFocus = true;
+        check(f.pump(), "Returning Windows foreground can rearm without process restart");
+        check(f.bridge.hasGameFocus(), "Direct game actions recover their authoritative focus gate");
+        f.surface.focused = false;
+        check(!f.bridge.hasGameFocus(), "Direct game actions also reject ordinary surface focus loss");
+        f.surface.focused = true; f.bridge.close();
+        check(!f.bridge.hasGameFocus(), "A closed bridge cannot authorize direct game actions");
+    }
+
+    private static void observerRetry() {
+        Fixture f = new Fixture();
+        f.surface.focused = false; f.pump(); f.surface.focused = true;
+        f.output.observeFailure = true;
+        check(!f.pump(), "Observer activation failure is contained");
+        int attempts = f.output.activationCalls;
+        for (int i = 0; i < 1_000; i++) f.pump();
+        check(f.output.activationCalls == attempts, "Same-frame pump duplicates do not retry failed observer");
+        f.now.set(499_999_999L); f.pump();
+        check(f.output.activationCalls == attempts, "Failed observer activation backs off for half a second");
+        f.now.set(500_000_000L); f.pump();
+        check(f.output.activationCalls == attempts + 1, "A bounded observer retry occurs after delay");
+        f.output.observeFailure = false; f.now.set(1_000_000_000L);
+        check(f.pump(), "Recovered observer can resume after neutral cleanup and retry delay");
+        check(f.bridge.getStatus().indexOf("Input suspended") < 0, "Successful retry clears stale failure status");
+    }
+
+    private static void stoppedObserverRecovery() {
+        Fixture f = new Fixture(); f.output.operational = false;
+        check(!f.pump(), "Stopped observer is detected during an idle frame without waiting for an input action");
+        int attempts = f.output.activationCalls;
+        f.pump(); check(f.output.activationCalls == attempts, "Stopped observer recovery respects backoff");
+        f.now.set(500_000_000L);
+        check(f.pump() && f.output.operational, "Next throttled activation restarts a stopped observer");
+    }
+
     private static void check(boolean value,String message) { if(!value) throw new AssertionError(message); }
     private static void eq(Object actual,Object expected) { check(actual.equals(expected),"Expected "+expected+" but got "+actual); }
     private static final class Fixture {
@@ -204,17 +286,23 @@ public final class BridgeTests {
         public void move(float x,float y){this.x=quantized?Math.round(x):x;this.y=quantized?Math.round(y):y;}
     }
     private static final class FakeOutput implements DesktopInputBridge.Output {
+        int failedReleaseKey = -1, failedReleaseMouse = -1, closeCalls, activationCalls;
+        boolean linkageFailure, closeFailure, observeFailure, acceptsFocus = true, operational = true;
         final List<String> events=new ArrayList<>(); final Set<Integer> physicalKeys=new HashSet<>(), physicalButtons=new HashSet<>();
         final Set<Integer> disownedButtons=new HashSet<>();
         final long[] keyRelease=new long[256],mouseRelease=new long[8];
-        public void observe(boolean active){} public boolean isPhysicalKeyDown(int key){return physicalKeys.contains(key);}
+        public boolean acceptsFocus(){return acceptsFocus;}
+        public boolean isOperational(){return operational;}
+        public void observe(boolean active){if(active)activationCalls++; if(observeFailure)fail(); if(active)operational=true;} public boolean isPhysicalKeyDown(int key){return physicalKeys.contains(key);}
         public boolean isPhysicalMouseDown(int button){return physicalButtons.contains(button);} public boolean preservesPhysicalHolds(){return true;}
         public long keyReleaseSequence(int key){return keyRelease[key];}
         public long mouseReleaseSequence(int button){return mouseRelease[button];}
         public void disownMouse(int button){disownedButtons.add(button);}
-        public void key(int key,boolean down){events.add("k"+key+(down?"+":"-"));}
-        public void mouse(int button,boolean down){events.add("m"+button+(down?"+":"-"));}
+        public void key(int key,boolean down){if (!down && key == failedReleaseKey) fail(); events.add("k"+key+(down?"+":"-"));}
+        public void mouse(int button,boolean down){if (!down && button == failedReleaseMouse) fail(); events.add("m"+button+(down?"+":"-"));}
         public void wheel(int notches){events.add("w"+notches);} public boolean supportsUnicode(){return true;}
-        public void unicode(char c){events.add("u"+(int)c);} public String description(){return "test";} public void close(){}
+        public void unicode(char c){events.add("u"+(int)c);} public String description(){return "test";}
+        public void close(){closeCalls++; if (closeFailure) fail();}
+        private void fail(){if (linkageFailure) throw new UnsatisfiedLinkError("Injected native failure"); throw new IllegalStateException("Injected output failure");}
     }
 }

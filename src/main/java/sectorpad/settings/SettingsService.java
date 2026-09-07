@@ -2,6 +2,7 @@ package sectorpad.settings;
 
 import lunalib.lunaSettings.LunaSettings;
 import lunalib.lunaSettings.LunaSettingsListener;
+import sectorpad.diagnostics.Diagnostics;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -63,17 +64,21 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         if (initialized) return;
         initialized = true;
         try { state = store.load(); if (!store.warning().isEmpty()) report(store.warning()); }
-        catch (IOException failure) { storageBlocked = true; report("Settings storage is unavailable: " + failure.getMessage()); }
+        catch (IOException failure) { Diagnostics.error("settings.load_failed", failure); storageBlocked = true; report("Settings storage is unavailable: " + failure.getMessage()); }
         try { wheelLayout = store.loadWheelLayout(); if (!store.warning().isEmpty()) report(store.warning()); }
-        catch (IOException failure) { wheelStorageBlocked = true; report("Saved wheel layout is unavailable: " + failure.getMessage()); }
+        catch (IOException failure) { Diagnostics.error("settings.wheel_load_failed", failure); wheelStorageBlocked = true; report("Saved wheel layout is unavailable: " + failure.getMessage()); }
         try { preferenceResets = store.loadPreferenceResets(); if (!store.warning().isEmpty()) report(store.warning()); }
-        catch (IOException failure) { preferenceStorageBlocked = true; report("Saved section resets are unavailable: " + failure.getMessage()); }
+        catch (IOException failure) { Diagnostics.error("settings.resets_load_failed", failure); preferenceStorageBlocked = true; report("Saved section resets are unavailable: " + failure.getMessage()); }
         observedFingerprint = state.nativeBindingFingerprint;
         nativeSettings = source.settings(); settings = preferenceResets.apply(nativeSettings);
         if (source.usesLuna()) { LunaSettings.addSettingsListener(this); attached = true; }
         refresh();
     }
-    @Override public void settingsChanged(String modID) { if (ControllerSettings.MOD_ID.equals(modID)) refresh(); }
+    @Override public void settingsChanged(String modID) {
+        if (!initialized || !ControllerSettings.MOD_ID.equals(modID)) return;
+        try { refresh(); }
+        catch (RuntimeException | LinkageError failure) { sectorpad.game.RuntimeHooks.fail("runtime.luna_settings", failure); }
+    }
     /** Also call after loading/new-game creation, because Luna skips its listener in new-game configuration. */
     public void refresh() {
         ControllerSettings old = settings;
@@ -82,7 +87,7 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         if (!reconciled.equals(preferenceResets)) {
             preferenceResets = reconciled;
             try { store.savePreferenceResets(reconciled); }
-            catch (IOException failure) { report("Luna values resumed, but the reset markers could not be saved: " + failure.getMessage()); }
+            catch (IOException failure) { Diagnostics.error("settings.reset_reconcile_failed", failure); report("Luna values resumed, but the reset markers could not be saved: " + failure.getMessage()); }
         }
         settings = preferenceResets.apply(nativeSettings);
         if (deviceId == null) calibration = settings.calibrationDefaults();
@@ -160,7 +165,7 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
             if (wheelLayout.profiles().containsKey(id)) {
                 WheelLayout cleaned = wheelLayout.resetProfile(id);
                 try { store.saveWheelLayout(cleaned); wheelLayout = cleaned; }
-                catch (IOException failure) { report("Profile deleted. Its inactive wheel layout could not yet be removed: " + failure.getMessage()); return true; }
+                catch (IOException failure) { Diagnostics.error("settings.profile_wheel_cleanup_failed", failure); report("Profile deleted. Its inactive wheel layout could not yet be removed: " + failure.getMessage()); return true; }
             }
             report("Profile deleted."); return true;
         }
@@ -168,11 +173,11 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
     }
     public boolean importProfile(Path source) {
         try { BindingProfile candidate = store.importProfile(source); preview(candidate); return true; }
-        catch (IOException | IllegalArgumentException invalid) { report("Profile import was not applied: " + invalid.getMessage()); return false; }
+        catch (IOException | IllegalArgumentException invalid) { if (invalid instanceof IOException) Diagnostics.error("settings.profile_import_failed", invalid); report("Profile import was not applied: " + invalid.getMessage()); return false; }
     }
     public Path exportCurrentProfile() {
         try { Path result = store.exportProfile(state.active()); report("Exported the committed profile to the SectorPad exports folder."); return result; }
-        catch (IOException failure) { report("Profile export failed: " + failure.getMessage()); return null; }
+        catch (IOException failure) { Diagnostics.error("settings.profile_export_failed", failure); report("Profile export failed: " + failure.getMessage()); return null; }
     }
     public void setDevice(String deviceId) {
         if (Objects.equals(this.deviceId, deviceId)) return;
@@ -183,7 +188,7 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
     public boolean saveCalibration(DeviceCalibration candidate) {
         if (deviceId == null) { report("Connect a controller before saving device calibration."); return false; }
         try { store.saveCalibration(deviceId, candidate); calibration = candidate; listener.changed(settings, activeProfile()); report("Saved calibration for this controller."); return true; }
-        catch (IOException failure) { report("Calibration could not be saved: " + failure.getMessage()); return false; }
+        catch (IOException failure) { Diagnostics.error("settings.calibration_save_failed", failure); report("Calibration could not be saved: " + failure.getMessage()); return false; }
     }
     public boolean applyLunaCalibrationToDevice() { return saveCalibration(settings.calibrationDefaults()); }
     public boolean resetCalibration(DeviceCalibration.Section section) { return saveCalibration(calibration.reset(section)); }
@@ -195,7 +200,7 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         try {
             store.savePreferenceResets(candidate); preferenceResets = candidate; settings = candidate.apply(nativeSettings);
             listener.changed(settings, activeProfile()); report(success); return true;
-        } catch (IOException failure) { report("Section reset was not committed: " + failure.getMessage()); return false; }
+        } catch (IOException failure) { Diagnostics.error("settings.resets_save_failed", failure); report("Section reset was not committed: " + failure.getMessage()); return false; }
     }
     /** Apply at wheel construction. Stable IDs include the logical context, never a transient screen/ship identity. */
     public <T> List<T> orderWheel(String stableWheelId, String label, List<T> entries, Function<T, String> id, Function<T, String> entryLabel) {
@@ -255,24 +260,26 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
     private boolean persistWheelLayout(WheelLayout candidate, String success) {
         if (wheelStorageBlocked) { report("Wheel order cannot be saved until its storage problem is resolved."); return false; }
         try { store.saveWheelLayout(candidate); wheelLayout = candidate; listener.changed(settings, activeProfile()); report(success); return true; }
-        catch (IOException failure) { report("Wheel order was not committed: " + failure.getMessage()); return false; }
+        catch (IOException failure) { Diagnostics.error("settings.wheel_save_failed", failure); report("Wheel order was not committed: " + failure.getMessage()); return false; }
     }
     private void loadCalibration() {
         calibration = settings.calibrationDefaults();
         if (deviceId != null) {
             try { calibration = store.calibrationFor(deviceId, calibration); }
-            catch (IOException failure) { report("Saved calibration could not be loaded; bounded Luna defaults are active. " + failure.getMessage()); }
+            catch (IOException failure) { Diagnostics.error("settings.calibration_load_failed", failure); report("Saved calibration could not be loaded; bounded Luna defaults are active. " + failure.getMessage()); }
         }
     }
     private boolean persist(ProfileStore.State candidate) {
         if (storageBlocked) { report("Settings cannot be saved until the storage problem is resolved. " + store.directory().getFileName()); return false; }
         try { store.save(candidate); return true; }
-        catch (IOException failure) { report("Settings were not committed: " + failure.getMessage()); return false; }
+        catch (IOException failure) { Diagnostics.error("settings.save_failed", failure); report("Settings were not committed: " + failure.getMessage()); return false; }
     }
     public void report(String text) { status = text; listener.statusChanged(text); }
     @Override public void close() {
-        if (preview != null) revert("Controller Setup closed. Previous controls restored.");
-        if (attached) { LunaSettings.removeSettingsListener(this); attached = false; }
-        initialized = false;
+        try { if (preview != null) revert("Controller Setup closed. Previous controls restored."); }
+        finally {
+            try { if (attached) LunaSettings.removeSettingsListener(this); }
+            finally { attached = false; initialized = false; listener = (prefs, profile) -> { }; }
+        }
     }
 }

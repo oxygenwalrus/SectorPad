@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
+import sectorpad.diagnostics.Diagnostics;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
@@ -17,6 +18,8 @@ import java.util.function.LongSupplier;
  */
 public final class DesktopInputBridge implements AutoCloseable {
     public interface Output extends AutoCloseable {
+        default boolean acceptsFocus() { return true; }
+        default boolean isOperational() { return true; }
         void observe(boolean active);
         boolean isPhysicalKeyDown(int key);
         boolean isPhysicalMouseDown(int button);
@@ -52,6 +55,8 @@ public final class DesktopInputBridge implements AutoCloseable {
     private final LongSupplier clock;
     private Output output;
     private boolean initialized, active, closed;
+    private boolean retryPending;
+    private long retryAt;
     private String context;
     private String failure = "Input initializes when the game is focused";
     private final Set<Integer> wantedKeys = new LinkedHashSet<>();
@@ -80,7 +85,15 @@ public final class DesktopInputBridge implements AutoCloseable {
     /** Returns false when focus, platform capability, or caller ownership blocks input. */
     public synchronized boolean pump(boolean enabled, String nextContext) {
         if (closed) return false;
+        try { return pumpOwned(enabled, nextContext); }
+        catch (RuntimeException | LinkageError ex) { fail(ex); return false; }
+    }
+
+    private boolean pumpOwned(boolean enabled, String nextContext) {
+        if (retryPending && clock.getAsLong() - retryAt < 0) return false;
+        retryPending = false;
         boolean focused = enabled && surface.focused();
+        if (focused && output != null) focused = output.acceptsFocus();
         boolean changed = context != null && !context.equals(nextContext);
         if (!focused || changed) {
             releaseAll();
@@ -93,9 +106,12 @@ public final class DesktopInputBridge implements AutoCloseable {
         context = nextContext;
         if (!initialized) initialize();
         if (output == null) return false;
+        if (!output.acceptsFocus()) return false;
         try {
+            if (active && !output.isOperational()) throw new IllegalStateException("Desktop observer stopped; input recovery pending");
             if (!active) output.observe(true);
             active = true;
+            failure = "";
             maintainHolds();
             long now = clock.getAsLong();
             if (running != null && now >= releaseAt) {
@@ -150,6 +166,10 @@ public final class DesktopInputBridge implements AutoCloseable {
         } catch (Exception | LinkageError ex) {
             failure = "Desktop input unavailable: " + ex.getClass().getSimpleName() + ": " + ex.getMessage();
             output = null;
+            initialized = false;
+            retryAt = clock.getAsLong() + 5_000_000_000L;
+            retryPending = true;
+            Diagnostics.error("bridge.initialize", ex);
         }
     }
 
@@ -180,7 +200,10 @@ public final class DesktopInputBridge implements AutoCloseable {
         }
     }
 
-    private boolean ready() { return active && !closed && output != null && surface.focused(); }
+    private boolean ready() { return active && !closed && output != null && surface.focused() && output.acceptsFocus(); }
+
+    /** Authoritative focus gate for both bridged input and direct game API actions. */
+    public synchronized boolean hasGameFocus() { return !closed && surface.focused() && (output == null || output.acceptsFocus()); }
 
     public synchronized void movePointer(float x, float y) {
         if (!ready()) return;
@@ -305,10 +328,18 @@ public final class DesktopInputBridge implements AutoCloseable {
         running = null;
         // Finish a mouse chord while its owned modifier is still down.
         for (int button : new HashSet<>(ownedButtons)) {
-            try { mouseUp(button); } catch (RuntimeException ex) { failure = "Input release failed: " + ex.getMessage(); }
+            try { mouseUp(button); }
+            catch (RuntimeException | LinkageError ex) {
+                failure = "Input release failed: " + ex.getClass().getSimpleName();
+                Diagnostics.error("bridge.release_mouse", ex);
+            }
         }
         for (int key : new HashSet<>(ownedKeys)) {
-            try { keyUp(key); } catch (RuntimeException ex) { failure = "Input release failed: " + ex.getMessage(); }
+            try { keyUp(key); }
+            catch (RuntimeException | LinkageError ex) {
+                failure = "Input release failed: " + ex.getClass().getSimpleName();
+                Diagnostics.error("bridge.release_key", ex);
+            }
         }
         wantedKeys.clear();
         wantedButtons.clear();
@@ -324,19 +355,29 @@ public final class DesktopInputBridge implements AutoCloseable {
     public synchronized String capabilitySummary() { return output == null ? failure : output.description() + (active ? "; game focused" : "; input suspended") + (failure.isEmpty() ? "" : "; " + failure); }
 
     private void fail(Throwable ex) {
-        Global.getLogger(DesktopInputBridge.class).warn("SectorPad input bridge suspended",ex);
-        failure = "Input suspended: " + ex.getClass().getSimpleName() + ": " + ex.getMessage();
-        releaseAll();
+        Diagnostics.error("bridge.input", ex);
+        failure = "Input suspended: " + ex.getClass().getSimpleName();
         active = false;
-        if (output != null) output.observe(false);
+        retryAt = clock.getAsLong() + 500_000_000L;
+        retryPending = true;
+        releaseAll();
+        if (output != null) {
+            try { output.observe(false); }
+            catch (RuntimeException | LinkageError cleanup) { Diagnostics.error("bridge.observer_suspend", cleanup); }
+        }
     }
 
     @Override public synchronized void close() {
         if (closed) return;
-        releaseAll();
-        active = false;
-        closed = true;
-        if (output != null) output.close();
+        try { releaseAll(); }
+        finally {
+            active = false;
+            closed = true;
+            if (output != null) {
+                try { output.close(); }
+                catch (RuntimeException | LinkageError ex) { Diagnostics.error("bridge.close", ex); }
+            }
+        }
     }
 
     private static final class Tap {
