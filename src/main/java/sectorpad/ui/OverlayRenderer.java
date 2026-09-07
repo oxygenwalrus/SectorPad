@@ -138,10 +138,12 @@ public final class OverlayRenderer {
         wheelLayout=OverlayLayout.wheel(width,height,scale);
         float cx=wheelLayout.x(),cy=wheelLayout.y(),r=wheelLayout.radius(),inner=wheelLayout.inner(),s=wheelLayout.scale();
         rect(0,0,width,height,DIM);List<RadialModel.Entry> entries=wheel.visible();
+        ring(cx,cy,r+7*s,alpha(STEEL,160),1);
         for(int i=0;i<wheel.slots();i++){
             boolean chosen=i==wheel.selected(),exists=i<entries.size(),enabled=exists&&entries.get(i).enabled();
-            sector(cx,cy,inner,r,i,wheel.slots(),chosen?SELECTED:exists?PANEL:alpha(FIELD,220));
-            sectorOutline(cx,cy,inner,r,i,wheel.slots(),chosen?FOCUS:alpha(CYAN,exists?120:50),chosen?2*s:Math.max(1,s));
+            sector(cx,cy,inner+4*s,r,i,wheel.slots(),chosen?SELECTED:exists?PANEL:alpha(FIELD,100));
+            sectorOutline(cx,cy,inner+4*s,r,i,wheel.slots(),chosen?alpha(FOCUS,120):alpha(STEEL,exists?150:40),Math.max(1,s));
+            if(exists)sector(cx,cy,r-3*s,r,i,wheel.slots(),chosen?FOCUS:alpha(CYAN,enabled?100:35));
             double theta=(double)i/wheel.slots()*Math.PI*2;float sx=(float)Math.sin(theta),sy=(float)Math.cos(theta);
             if(chosen){
                 float tx=cx+sx*(r-8*s),ty=cy+sy*(r-8*s),px=sy*5*s,py=-sx*5*s;
@@ -149,19 +151,23 @@ public final class OverlayRenderer {
             }
             if(exists){
                 float tx=cx+sx*r*.73f,ty=cy+sy*r*.73f;
-                text(entries.get(i).label(),tx,ty+14*s,18*s,enabled?(chosen?FOCUS:INK):MUTED,r*.73f,40*s,true);
-                if(!enabled)text("Unavailable",tx,ty-28*s,13*s,MUTED,r*.75f,17*s,true);
+                TripadDrawing.glyph(entries.get(i).id(),tx,ty+20*s,10*s,enabled?(chosen?FOCUS:CYAN):STEEL);
+                text(entries.get(i).label(),tx,ty+2*s,17*s,enabled?INK:MUTED,r*.64f,43*s,true);
+                if(!enabled)text("Unavailable",tx,ty-37*s,12*s,MUTED,r*.65f,16*s,true);
             }
         }
         circle(cx,cy,inner-3*s,FIELD);ring(cx,cy,inner-3*s,alpha(STEEL,180),Math.max(1,s));
         RadialModel.Entry selected=wheel.highlighted();
-        text(selected==null?"Choose an action":selected.label(),cx,cy+35*s,20*s,selected==null?INK:FOCUS,inner*1.76f,45*s,true);
-        text(selected==null?"Centre cancels":selected.enabled()?"Ready":"Unavailable",cx,cy-19*s,15*s,MUTED,inner*1.74f,43*s,true);
-        text(wheel.title(),cx,wheelLayout.titleY(),26*s,INK,width-48,34*s,true);
-        text("Page "+(wheel.page()+1)+" / "+wheel.pages(),cx,wheelLayout.pageY(),16*s,MUTED,width-48,21*s,true);
+        TripadDrawing.glyph(selected==null?"hub":selected.id(),cx,cy+40*s,13*s,selected==null?CYAN:FOCUS);
+        text(selected==null?"Choose an action":selected.label(),cx,cy+13*s,20*s,INK,inner*1.72f,47*s,true);
+        text(selected==null?"Centre cancels":selected.enabled()?"Ready":"Unavailable",cx,cy-42*s,14*s,MUTED,inner*1.74f,26*s,true);
+        text(wheel.title(),cx,wheelLayout.titleY(),28*s,INK,width-48,37*s,true);
+        text("Page "+(wheel.page()+1)+" of "+wheel.pages(),cx,wheelLayout.pageY(),15*s,MUTED,width-48,21*s,true);
         String description=selected==null?"Right stick or D-pad to choose":!selected.enabled()&&selected.reason()!=null&&!selected.reason().isBlank()?selected.reason():selected.description();
-        text(description,cx,wheelLayout.descriptionY(),17*s,INK,Math.min(width-48,870*s),41*s,true);
-        text(footer,cx,wheelLayout.footerY(),16*s,CYAN,width-48,40*s,true);
+        text(description,cx,wheelLayout.descriptionY(),17*s,INK,Math.min(width-48,770*s),41*s,true);
+        float footW=Math.min(width-40*s,920*s);
+        TripadDrawing.plate(cx-footW/2,wheelLayout.footerY()-34*s,footW,47*s,8*s,PANEL,alpha(STEEL,140));
+        text(footer,cx,wheelLayout.footerY(),16*s,MUTED,footW-28*s,35*s,true);
     }
     private void drawKeyboard(float width,float height,float scale,TextEntryModel keyboard,String footer){
         String[] rows=keyboard.rows();keyboardLayout=OverlayLayout.keyboard(width,height,scale,rows,keyboard.docked());
@@ -173,10 +179,7 @@ public final class OverlayRenderer {
         text(keyboard.visibleText(capacity),field.x()+13*s,field.top()-7*s,24*s,INK,field.width()-26*s,30*s,false);
         for(OverlayLayout.Key key:keyboardLayout.keys()){
             OverlayLayout.Rect r=key.bounds();boolean chosen=keyboard.row()==key.row()&&keyboard.column()==key.column();
-            rect(r.x(),r.y(),r.width(),r.height(),chosen?SELECTED:KEY);
-            outline(r.x(),r.y(),r.width(),r.height(),chosen?FOCUS:alpha(STEEL,165),chosen?2*s:Math.max(1,s));
-            if(chosen)triangle(r.x()+3*s,r.top()-3*s,r.x()+15*s,r.top()-3*s,r.x()+3*s,r.top()-15*s,FOCUS);
-            else segments(new float[]{r.x()+1,r.y()+1,r.right()-1,r.y()+1},alpha(SHADOW,180),Math.max(1,s));
+            TripadDrawing.control(r.x(),r.y(),r.width(),r.height(),s,chosen);
             String label=key.row()==rows.length?new String[]{"Space","Erase","Shift","Accept","Cancel"}[key.column()]:String.valueOf(rows[key.row()].charAt(key.column()));
             if(label.equals(" ")){
                 float cx=r.x()+r.width()/2,cy=r.y()+r.height()/2;
@@ -244,15 +247,10 @@ public final class OverlayRenderer {
     }
     private static void diamond(float x,float y,float r,Color c,float stroke){segments(new float[]{x-r,y,x,y+r,x,y+r,x+r,y,x+r,y,x,y-r,x,y-r,x-r,y},c,stroke);}
     private static void panelFrame(float x,float y,float w,float h,float s){
-        float cut=Math.min(9*s,Math.min(w,h)/8),p[]={x+cut,y,x+w-cut,y,x+w,y+cut,x+w,y+h-cut,x+w-cut,y+h,x+cut,y+h,x,y+h-cut,x,y+cut};
-        GL11.glDisable(GL11.GL_TEXTURE_2D);color(PANEL);GL11.glBegin(GL11.GL_POLYGON);
-        for(int i=0;i<p.length;i+=2)GL11.glVertex2f(p[i],p[i+1]);GL11.glEnd();
-        color(STEEL);GL11.glLineWidth(Math.max(1,1.5f*s));GL11.glBegin(GL11.GL_LINE_LOOP);
-        for(int i=0;i<p.length;i+=2)GL11.glVertex2f(p[i],p[i+1]);GL11.glEnd();
-        segments(new float[]{x+5*s,y+h-30*s,x+5*s,y+h-cut,x+5*s,y+h-cut,x+cut,y+h-5*s,x+cut,y+h-5*s,x+87*s,y+h-5*s},CYAN,Math.max(1,1.5f*s));
+        TripadDrawing.frame(x,y,w,h,s);
     }
-    private static double start(int index,int slots){return index*Math.PI*2/slots-Math.PI/slots+.012;}
-    private static double end(int index,int slots){return index*Math.PI*2/slots+Math.PI/slots-.012;}
+    private static double start(int index,int slots){return index*Math.PI*2/slots-Math.PI/slots+.024;}
+    private static double end(int index,int slots){return index*Math.PI*2/slots+Math.PI/slots-.024;}
     private static void sector(float x,float y,float inner,float outer,int index,int slots,Color c){
         GL11.glDisable(GL11.GL_TEXTURE_2D);color(c);GL11.glBegin(GL11.GL_QUAD_STRIP);double a0=start(index,slots),a1=end(index,slots);
         for(int i=0;i<=24;i++){double a=a0+(a1-a0)*i/24;float sx=(float)Math.sin(a),sy=(float)Math.cos(a);GL11.glVertex2f(x+sx*inner,y+sy*inner);GL11.glVertex2f(x+sx*outer,y+sy*outer);}GL11.glEnd();

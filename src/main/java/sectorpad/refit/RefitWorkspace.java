@@ -5,6 +5,7 @@ import com.fs.starfarer.api.graphics.SpriteAPI;
 import org.lazywizard.lazylib.ui.LazyFont;
 import org.lwjgl.opengl.GL11;
 import sectorpad.ui.OverlayLayout;
+import sectorpad.ui.TripadDrawing;
 import java.awt.Color;
 import java.util.*;
 import java.util.List;
@@ -93,31 +94,46 @@ public final class RefitWorkspace {
         try{
             GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_CULL_FACE);GL11.glDisable(GL11.GL_SCISSOR_TEST);
             GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
-            rect(0,0,width,height,DIM);rect(x,y,w,h,PANEL);border(x,y,w,h,CYAN);
-            text("REFIT / "+snapshot.shipName(),x+20*s,y+h-18*s,24*s,INK,w-340*s,32*s);
-            text(snapshot.hullName()+"  ·  "+(ships?"Choose a ship":SECTIONS.get(section)),x+20*s,y+h-50*s,17*s,MUTED,w-340*s,24*s);
-            text(snapshot.unusedOP()+" OP remaining / "+snapshot.totalOP(),x+w-300*s,y+h-23*s,21*s,snapshot.unusedOP()<0?Color.ORANGE:FOCUS,285*s,32*s);
+            rect(0,0,width,height,DIM);TripadDrawing.frame(x,y,w,h,s);
+            TripadDrawing.glyph("refit",x+39*s,y+h-42*s,17*s,CYAN);
+            text(snapshot.shipName(),x+72*s,y+h-17*s,28*s,INK,w-395*s,38*s);
+            text(snapshot.hullName()+"  /  Refit",x+73*s,y+h-53*s,16*s,MUTED,w-395*s,24*s);
+            float opX=x+w-266*s;
+            text(Integer.toString(snapshot.unusedOP()),opX,y+h-18*s,32*s,snapshot.unusedOP()<0?FOCUS:INK,78*s,40*s);
+            text("OP available",opX+83*s,y+h-20*s,16*s,MUTED,162*s,23*s);
+            text("of "+snapshot.totalOP()+" total",opX+83*s,y+h-43*s,14*s,MUTED,162*s,21*s);
+            rect(opX,y+h-72*s,242*s,3*s,KEY);
+            rect(opX,y+h-72*s,242*s*Math.max(0,Math.min(1,snapshot.unusedOP()/(float)Math.max(1,snapshot.totalOP()))),3*s,FOCUS);
             float tabY=y+h-116*s,tabW=(w-32*s)/5;
-            for(int i=0;i<5;i++)button("tab:"+i,SECTIONS.get(i),x+16*s+i*tabW,tabY,tabW-5*s,32*s,i==section&&!ships?SELECTED:KEY,s);
-            float bodyY=y+90*s,bodyH=tabY-bodyY-16*s,leftW=w*.405f;
-            button("ships",ships?"Back to fitting":"Choose ship...",x+16*s,bodyY+bodyH-34*s,leftW-24*s,32*s,KEY,s);
+            for(int i=0;i<5;i++){
+                float tx=x+16*s+i*tabW;boolean active=i==section&&!ships;
+                rect(tx,tabY,tabW-5*s,32*s,active?SELECTED:FIELD);
+                if(active)rect(tx,tabY,tabW-5*s,2*s,CYAN);
+                text(SECTIONS.get(i),tx+12*s,tabY+25*s,16*s,active?INK:MUTED,tabW-25*s,24*s);
+                hits.add(new Hit(new OverlayLayout.Rect(tx,tabY,tabW-5*s,32*s),"tab:"+i));
+            }
+            float bodyY=y+90*s,bodyH=tabY-bodyY-16*s,leftW=w*.32f;
+            button("ships",ships?"Back to fitting":"Browse fleet",x+16*s,bodyY+bodyH-34*s,leftW-24*s,32*s,KEY,s);
             int start=(selected/pageSize)*pageSize;float rowTop=bodyY+bodyH-44*s;
             for(int i=start;i<Math.min(rows.size(),start+pageSize);i++){
                 Row row=rows.get(i);float ry=rowTop-(i-start+1)*54*s;
-                rect(x+16*s,ry,leftW-24*s,49*s,i==selected?SELECTED:FIELD);if(i==selected)border(x+16*s,ry,leftW-24*s,49*s,FOCUS);
-                text(row.label(),x+26*s,ry+42*s,18*s,row.enabled()?INK:MUTED,leftW-46*s,25*s);
-                text(row.enabled()?shortDetail(row.detail()):"Inspect · native action unavailable",x+26*s,ry+19*s,13*s,MUTED,leftW-46*s,17*s);
+                rect(x+16*s,ry,leftW-24*s,49*s,i==selected?SELECTED:FIELD);
+                if(i==selected){rect(x+16*s,ry+5*s,3*s,39*s,FOCUS);TripadDrawing.line(x+22*s,ry,leftW+x-8*s,ry,alpha(FOCUS,90),1);}
+                text(row.label(),x+30*s,ry+42*s,18*s,i==selected?INK:row.enabled()?INK:MUTED,leftW-54*s,25*s);
+                text(row.enabled()?shortDetail(row.detail()):"Inspect only",x+30*s,ry+19*s,13*s,MUTED,leftW-54*s,17*s);
                 hits.add(new Hit(new OverlayLayout.Rect(x+16*s,ry,leftW-24*s,49*s),row.id()));
             }
             if(rows.isEmpty())text("No items in this section",x+26*s,rowTop-25*s,19*s,MUTED,leftW-46*s,50*s);
             button("prev","Previous",x+16*s,bodyY-24*s,110*s,26*s,KEY,s);
             button("next","Next",x+134*s,bodyY-24*s,85*s,26*s,KEY,s);
-            text(rows.isEmpty()?"0 / 0":(selected+1)+" / "+rows.size(),x+235*s,bodyY-17*s,16*s,MUTED,100*s,24*s);
-            float rightX=x+leftW+12*s,rightW=w-leftW-30*s;
+            text(rows.isEmpty()?"0 / 0":(selected+1)+" / "+rows.size(),x+235*s,bodyY-5*s,16*s,MUTED,100*s,24*s);
+            float rightX=x+leftW+18*s,rightW=w-leftW-42*s;
+            TripadDrawing.line(x+leftW+4*s,bodyY,x+leftW+4*s,bodyY+bodyH,alpha(STEEL,130),1);
             if(section==0&&!ships&&!details){
-                float diagramW=rightW*.52f;drawShip(rightX,bodyY+55*s,diagramW,bodyH-60*s,s);
-                drawDetails(rightX+diagramW+14*s,bodyY,rightW-diagramW-14*s,bodyH,s);
+                float diagramW=rightW*.48f;drawShip(rightX,bodyY+28*s,diagramW,bodyH-28*s,s);
+                drawDetails(rightX+diagramW+22*s,bodyY,rightW-diagramW-22*s,bodyH,s);
             }else drawDetails(rightX,bodyY,rightW,bodyH,s);
+            TripadDrawing.line(x+16*s,y+64*s,x+w-16*s,y+64*s,STEEL,1);
             button("native","Native refit",x+16*s,y+18*s,155*s,32*s,KEY,s);
             button("hub","Command hub",x+181*s,y+18*s,165*s,32*s,KEY,s);
             text(footer,x+362*s,y+44*s,15*s,CYAN,w-382*s,40*s);
@@ -126,10 +142,25 @@ public final class RefitWorkspace {
     private String shortDetail(String value){return value.length()>74?value.substring(0,71)+"...":value;}
     private void drawDetails(float x,float y,float w,float h,float s){
         Row row=selected();float top=y+h-8*s;
-        text(row==null?SECTIONS.get(section):row.label(),x,top,24*s,INK,w,65*s);
-        text(row==null?"":row.detail(),x,top-76*s,18*s,MUTED,w,125*s);
-        float sy=top-215*s;text("Vents  "+snapshot.vents()+"    Capacitors  "+snapshot.capacitors(),x,sy,18*s,FOCUS,w,50*s);
-        int i=0;for(String stat:snapshot.stats())text(stat,x,sy-54*s-i++*27*s,17*s,INK,w,25*s);
+        text(row==null?SECTIONS.get(section):row.label(),x,top,24*s,INK,w,62*s);
+        text(row==null?"":row.detail(),x,top-69*s,17*s,MUTED,w,95*s);
+        if(ships){
+            TripadDrawing.glyph("ship",x+26*s,top-202*s,24*s,CYAN);
+            text("Select a ship to open its fitting.",x+68*s,top-186*s,20*s,INK,w-68*s,55*s);
+            text("Equipment and ship statistics update after selection.",x+68*s,top-241*s,17*s,MUTED,w-68*s,70*s);
+            return;
+        }
+        float sy=top-181*s,half=(w-10*s)/2;
+        rect(x,sy-52*s,half,56*s,FIELD);rect(x+half+10*s,sy-52*s,half,56*s,FIELD);
+        text("Vents",x+10*s,sy-5*s,14*s,MUTED,half-20*s,20*s);
+        text(Integer.toString(snapshot.vents()),x+10*s,sy-24*s,23*s,CYAN,half-20*s,30*s);
+        text("Capacitors",x+half+20*s,sy-5*s,14*s,MUTED,half-20*s,20*s);
+        text(Integer.toString(snapshot.capacitors()),x+half+20*s,sy-24*s,23*s,CYAN,half-20*s,30*s);
+        float statY=sy-75*s;
+        for(String stat:snapshot.stats()){
+            if(statY<y+61*s)break;
+            text(stat,x,statY,16*s,INK,w,24*s);statY-=27*s;
+        }
         button("details",details?"Close details":"Expand details",x,y+8*s,Math.min(w,180*s),30*s,KEY,s);
     }
     private void drawShip(float x,float y,float w,float h,float s){
@@ -137,16 +168,23 @@ public final class RefitWorkspace {
         float spanX=Math.max(1,spriteWidth),spanY=Math.max(1,spriteHeight);
         for(var item:snapshot.mounts())if(item.mount()){spanX=Math.max(spanX,Math.abs(item.y())*2+20);spanY=Math.max(spanY,Math.abs(item.x())*2+20);}
         float scale=Math.min((w-28*s)/spanX,(h-28*s)/spanY),cx=x+w/2,cy=y+h/2;
+        TripadDrawing.plate(x,y,w,h,10*s,FIELD,alpha(STEEL,90));
+        float radius=Math.min(w,h)*.39f;
+        TripadDrawing.orbit(cx,cy,radius,alpha(STEEL,100),1);
+        TripadDrawing.orbit(cx,cy,radius*.67f,alpha(STEEL,55),1);
+        TripadDrawing.line(cx,y+15*s,cx,y+h-15*s,alpha(STEEL,65),1);
+        TripadDrawing.line(x+15*s,cy,x+w-15*s,cy,alpha(STEEL,65),1);
         if(sprite!=null){float oldW=sprite.getWidth(),oldH=sprite.getHeight(),oldAngle=sprite.getAngle(),oldAlpha=sprite.getAlphaMult();
             try{sprite.setSize(spriteWidth*scale,spriteHeight*scale);sprite.setAngle(0);sprite.setAlphaMult(.9f);sprite.renderAtCenter(cx,cy);}
             finally{sprite.setSize(oldW,oldH);sprite.setAngle(oldAngle);sprite.setAlphaMult(oldAlpha);}}
         for(var item:snapshot.mounts())if(item.mount()){
             float mx=cx-item.y()*scale,my=cy+item.x()*scale;boolean focus=item.id().equals(selectedId);
-            rect(mx-5*s,my-5*s,10*s,10*s,focus?FOCUS:KEY);border(mx-6*s,my-6*s,12*s,12*s,focus?FOCUS:CYAN);
+            if(focus)TripadDrawing.orbit(mx,my,13*s,alpha(FOCUS,160),1);
+            TripadDrawing.plate(mx-6*s,my-6*s,12*s,12*s,3*s,focus?FOCUS:FIELD,focus?FOCUS:CYAN);
             hits.add(new Hit(new OverlayLayout.Rect(mx-10*s,my-10*s,20*s,20*s),item.id()));
         }
     }
-    private void button(String id,String label,float x,float y,float w,float h,Color color,float s){rect(x,y,w,h,color);text(label,x+9*s,y+h-7*s,16*s,INK,w-18*s,h-4*s);hits.add(new Hit(new OverlayLayout.Rect(x,y,w,h),id));}
+    private void button(String id,String label,float x,float y,float w,float h,Color color,float s){TripadDrawing.control(x,y,w,h,s,color==SELECTED);text(label,x+12*s,y+h-7*s,16*s,INK,w-24*s,h-4*s);hits.add(new Hit(new OverlayLayout.Rect(x,y,w,h),id));}
     private void text(String value,float x,float y,float size,Color c,float w,float h){if(value==null||value.isEmpty()||w<=0||h<=0)return;if(textIndex==labels.size())labels.add(font.createText());var t=labels.get(textIndex++);t.setFontSize(size);t.setBaseColor(c);t.setMaxWidth(w);t.setMaxHeight(h);t.setText(value);t.draw(x,y);}
     private static void color(Color c){GL11.glColor4f(c.getRed()/255f,c.getGreen()/255f,c.getBlue()/255f,c.getAlpha()/255f);}
     private static void rect(float x,float y,float w,float h,Color c){GL11.glDisable(GL11.GL_TEXTURE_2D);color(c);GL11.glBegin(GL11.GL_QUADS);GL11.glVertex2f(x,y);GL11.glVertex2f(x+w,y);GL11.glVertex2f(x+w,y+h);GL11.glVertex2f(x,y+h);GL11.glEnd();}

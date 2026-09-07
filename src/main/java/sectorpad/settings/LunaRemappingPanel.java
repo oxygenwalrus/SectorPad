@@ -12,6 +12,7 @@ import lunalib.lunaUI.panel.LunaBaseCustomPanelPlugin;
 import org.lwjgl.input.Keyboard;
 import sectorpad.core.PadFrame;
 import java.awt.Color;
+import static sectorpad.ui.TripadTheme.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -341,7 +342,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         contentPanel = getPanel().createCustomPanel(width, height, null); getPanel().addComponent(contentPanel); contentPanel.getPosition().inTL(12, 10);
         TooltipMakerAPI ui = contentPanel.createUIElement(width, height, false); contentPanel.addUIElement(ui); ui.getPosition().inTL(0, 0);
         LabelAPI title = ui.addSectionHeading("SectorPad Controller Setup", Alignment.MID, 0); title.getPosition().inTL(0, 0);
-        float tabWidth = (width - 25) / 6;
+        float tabWidth = (width - 5f * (BindingProfile.CONTEXTS.size() - 1)) / BindingProfile.CONTEXTS.size();
         for (int i = 0; i < BindingProfile.CONTEXTS.size(); i++) {
             int index = i;
             button(ui, BindingProfile.CONTEXTS.get(i), i * (tabWidth + 5), 27, tabWidth, 27, i == contextIndex && !profilesMode && !toolsMode && !wheelsMode, () -> { if (!isCapturing() && !service.isPreviewing() && !hasPending()) { contextIndex = index; profilesMode = toolsMode = wheelsMode = false; wheelId = null; wheelDraft.clear(); selected = 0; capture.reset(); dirty = true; } });
@@ -353,7 +354,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         LunaElement info = new LunaElement(ui, infoWidth, diagramHeight); info.getPosition().inTL(infoX, 62); info.setRenderBackground(false); info.setRenderBorder(false);
         deviceLabel = info.getInnerElement().addPara("Controller", 0);
         info.getInnerElement().addPara("Profile: " + draft.displayName + (compact ? "\nA / Enter: choose   Y: preview\nArrows: select / context   P: sections" : "\nD-pad / up-down: select\nLB-RB / left-right: context\nA / Enter: choose   X: unassign\nY: preview   View / P: sections"), 5f);
-        info.getInnerElement().addPara("Recovery: hold View + Menu for 2 seconds.", 7f, Misc.getHighlightColor());
+        info.getInnerElement().addPara("Recovery: hold View + Menu for 2 seconds.", 7f, FOCUS);
         liveLabel = ui.addPara("Live input", 0); liveLabel.getPosition().inTL(0, diagramHeight + 69);
         statusLabel = ui.addPara("", 0); statusLabel.getPosition().inTL(0, diagramHeight + 92);
         float listTop = compact ? 240 : 280, rowHeight = 29f;
@@ -399,7 +400,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         button(ui, "Up", width - 84, top, 84, 27, false, () -> select(-1));
         button(ui, "Down", width - 84, top + 33, 84, 27, false, () -> select(1));
         LunaElement count = new LunaElement(ui, 84, 48); count.getPosition().inTL(width - 84, top + 66); count.setRenderBackground(false); count.setRenderBorder(false);
-        count.addText((selected + 1) + " / " + actions.size(), Misc.getTextColor(), Misc.getHighlightColor(), List.of()); count.centerText();
+        count.addText((selected + 1) + " / " + actions.size(), INK, FOCUS, List.of()); count.centerText();
     }
     private void buildProfiles(TooltipMakerAPI ui, float width, float top, float rowHeight) {
         List<BindingProfile> profiles = service.profiles(); profileSelected = Math.min(profileSelected, profiles.size() - 1); int start = profileSelected / pageSize * pageSize;
@@ -451,7 +452,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         shown.bindings(context()).forEach((action, control) -> { if (latest.buttons.contains(control)) matches.add(BindingProfile.actionLabel(action)); });
         liveLabel.setText(wheelsMode ? wheelId == null ? "Wheel order: choose a wheel to customize for " + service.committedProfile().displayName : "Wheel: " + wheelId + "   A / Enter: " + (wheelMoving ? "place" : "move") + "   Up/down: " + (wheelMoving ? "reorder" : "select") + "   Y: save" : String.format(Locale.ROOT, "Raw LT %.2f  RT %.2f   %s: %s", latest.rawLeftTrigger, latest.rawRightTrigger, context().toLowerCase(Locale.ROOT), matches.isEmpty() ? "release controls to see the next input" : String.join(", ", matches)));
         String status = service.isPreviewing() ? String.format(Locale.ROOT, "PREVIEW — %.0f seconds remaining. A keeps these controls; B restores the previous profile.", Math.ceil(service.previewSecondsRemaining())) : service.status();
-        statusLabel.setText(shorten(status, 175)); statusLabel.setColor(service.isPreviewing() ? Misc.getHighlightColor() : Misc.getTextColor());
+        statusLabel.setText(shorten(status, 175)); statusLabel.setColor(service.isPreviewing() ? FOCUS : INK);
     }
     private static String shorten(String value, int limit) { return value.length() <= limit ? value : value.substring(0, limit - 1) + "…"; }
     private void button(TooltipMakerAPI ui, String text, float x, float y, float width, float height, boolean selected, Runnable action) {
@@ -461,13 +462,13 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
                 if (closed || event.isConsumed() || !event.isLMBDownEvent() || event.isDoubleClick()) return;
                 event.consume(); playClickSound(); action.run();
             }
-            @Override public void onHoverEnter(InputEventAPI event) { setBorderColor(Misc.getHighlightColor()); }
-            @Override public void onHoverExit(InputEventAPI event) { setBorderColor(selected ? Misc.getHighlightColor() : Misc.getDarkPlayerColor()); }
+            @Override public void onHoverEnter(InputEventAPI event) { setBorderColor(FOCUS); }
+            @Override public void onHoverExit(InputEventAPI event) { setBorderColor(selected ? FOCUS : KEY); }
         };
         element.getPosition().inTL(x, y); element.setSelectionGroup("sectorpad.setup");
         clickTargets.add(new ClickTarget(element, action));
-        element.setBorderColor(selected ? Misc.getHighlightColor() : Misc.getDarkPlayerColor());
-        element.addText(text, selected ? Misc.getHighlightColor() : Misc.getTextColor(), Misc.getHighlightColor(), List.of()); element.centerText();
+        element.setBorderColor(selected ? FOCUS : KEY);
+        element.addText(text, selected ? FOCUS : INK, FOCUS, List.of()); element.centerText();
     }
     private static final class ControllerDiagram extends LunaElement {
         private final Map<String, LunaElement> controls = new LinkedHashMap<>();
@@ -490,14 +491,14 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         private void tile(String name, float x, float y, float width, float height) {
             LunaElement tile = new LunaElement(getInnerElement(), width, height * verticalScale); tile.getPosition().inTL(x, y * verticalScale);
             String label = name.replace("DPAD_", "").replace("LEFT", "<").replace("RIGHT", ">").replace("UP", "^").replace("DOWN", "v");
-            tile.addText(label, Misc.getTextColor(), Misc.getHighlightColor(), List.of()); tile.centerText(); controls.put(name, tile);
+            tile.addText(label, INK, FOCUS, List.of()); tile.centerText(); controls.put(name, tile);
         }
         private LunaElement analog(String name, float x, float y, float width, float height) {
             LunaElement tile = new LunaElement(getInnerElement(), width, height * verticalScale); tile.getPosition().inTL(x, y * verticalScale); tile.setRenderBackground(false); tile.setRenderBorder(false);
-            tile.addText(name, Misc.getTextColor(), Misc.getHighlightColor(), List.of()); tile.centerText(); return tile;
+            tile.addText(name, INK, FOCUS, List.of()); tile.centerText(); return tile;
         }
         void update(InputState state) {
-            controls.forEach((control, tile) -> { boolean held = state.rawButtons.contains(control); tile.setBackgroundColor(held ? Misc.getHighlightColor().darker() : Misc.getDarkPlayerColor().darker()); tile.setBorderColor(held ? Misc.getHighlightColor() : Misc.getDarkPlayerColor()); });
+            controls.forEach((control, tile) -> { boolean held = state.rawButtons.contains(control); tile.setBackgroundColor(held ? FOCUS.darker() : KEY.darker()); tile.setBorderColor(held ? FOCUS : KEY); });
             leftStick.changeText(String.format(Locale.ROOT, "Raw L %+.2f %+.2f", state.rawLeftX, state.rawLeftY), List.of()); leftStick.centerText();
             rightStick.changeText(String.format(Locale.ROOT, "Raw R %+.2f %+.2f", state.rawRightX, state.rawRightY), List.of()); rightStick.centerText();
         }

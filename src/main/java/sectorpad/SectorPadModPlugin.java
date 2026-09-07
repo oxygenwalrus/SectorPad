@@ -23,6 +23,7 @@ public final class SectorPadModPlugin extends BaseModPlugin {
             }
         }
         SectorPadRuntime.get().initialize();
+        sectorpad.ui.NativeHudTheme.apply();
         Global.getLogger(SectorPadModPlugin.class).info("SectorPad additive controller integration loaded; native input initializes on first UI frame");
     }
 

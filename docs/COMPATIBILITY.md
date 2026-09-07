@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.0.1`, dated **7 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.1.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -40,6 +40,14 @@ New tests cover 15 discovery scenarios, 41 diagnostic checks and 11 main-menu/cl
 A controlled console call into SectorPad's failure boundary disabled its callbacks, ran cleanup and automatically exported diagnostics through the game's common-data API. The report recorded version 1.0.1, game version 0.98a-RC8, disabled runtime and the intentional RuntimeException type. The existing console closed normally with Escape afterward and the native campaign remained available. This checks the mod's failure boundary, not a fatal native/JVM crash. The synthetic exception's one error trace is intentional test output.
 
 The user also reported bouncing D-pad navigation and focus on plain text. Discovery no longer guesses that arbitrary scroll-content rows are actionable. Navigation prioritizes controls in the current row/column, retains logical focus through pointer/layout updates, and consumes a known menu edge instead of also sending a native arrow. A stable cardinal direction prevents a diagonal roll from generating extra immediate steps. Thirteen actionable-target checks, four navigation scenario groups and 11 direction/repeat checks cover these cases; physical D-pad acceptance of this correction remains pending.
+
+## 1.1.0 modern TriPad UI
+
+The refit workspace and radial hub use shared matte blue-grey surfaces, restrained cyan accents, amber focus and native Insignia typography. Refit separates the equipment list, ship schematic and details; fleet selection shows a selection prompt instead of statistics for a different ship. Keyboard keys and SectorPad-owned Luna controls use the same palette. Native frame textures are supplied through normal mod asset loading, with the player UI colors set for the session. This explicitly includes native HUD skinning; original installed files and UI implementation classes are unchanged. The skin remains active for keyboard/mouse use while the mod is enabled. See [skin coverage and conflicts](HUD_SKIN.md).
+
+Live checks in the isolated Windows game covered the radial and refit at 1280×800, then refit fleet selection, mount focus, flux/statistics and designs/actions at 1280×720. The 720p keyboard and radial labels fit within their surfaces. Controller Setup now divides its tab rail by the actual context count, keeping the added Refit tab inside the panel; its [720p selection was verified](evidence/modern-setup-1280x720.jpg). The final native campaign trim preserves the date, logistics gauges and original menu positions. These checks used keyboard/mouse input and do not establish physical handheld acceptance. Recorded views: [refit and selected mount](evidence/modern-refit-1280x720.jpg), [radial hub](evidence/modern-radial-1280x720.jpg), and [keyboard](evidence/modern-keyboard-1280x720.jpg), and [native campaign HUD](evidence/modern-native-hud-1280x720.jpg).
+
+The full build runs deterministic native-texture checks plus 23 test/probe programs, including 137 refit checks, 2,916 settings assertions and 24,076 overlay geometry checks. All 32 original installation/dependency baseline hashes remain unchanged.
 
 ## Input ownership
 
