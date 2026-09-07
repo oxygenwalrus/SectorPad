@@ -70,6 +70,10 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         try { preferenceResets = store.loadPreferenceResets(); if (!store.warning().isEmpty()) report(store.warning()); }
         catch (IOException failure) { Diagnostics.error("settings.resets_load_failed", failure); preferenceStorageBlocked = true; report("Saved section resets are unavailable: " + failure.getMessage()); }
         observedFingerprint = state.nativeBindingFingerprint;
+        // Adding a context changes the fingerprint even when Luna was untouched.
+        // Preserve every migrated profile, including custom Luna mappings on old installations.
+        if(state.migratedRefitBindings)try{observedFingerprint=ProfileStore.fingerprint(source.bindings());state=state.withFingerprint(observedFingerprint);}
+        catch(IllegalArgumentException invalid){report("Saved refit bindings migrated; invalid Luna edits were left unapplied.");}
         nativeSettings = source.settings(); settings = preferenceResets.apply(nativeSettings);
         if (source.usesLuna()) { LunaSettings.addSettingsListener(this); attached = true; }
         refresh();

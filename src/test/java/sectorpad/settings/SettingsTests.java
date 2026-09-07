@@ -19,16 +19,16 @@ public final class SettingsTests {
         // Failure fixtures exercise diagnostics without opening the game's file appender.
         System.setProperty("log4j.defaultInitOverride", "true");
         org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
-        profiles(); tuning(); capture(); calibration(); persistence(); commonStorage(); preview(); wheelLayouts(); sectionResets();
+        profiles(); tuning(); capture(); calibration(); persistence(); commonStorage(); preview(); wheelLayouts(); sectionResets(); refitMigration();
         if (args.length > 0) csv(Path.of(args[0]));
         System.out.println("SettingsTests: " + assertions + " assertions passed (headless; no game/controller claim).");
     }
     private static void profiles() {
         BindingProfile standard = BindingProfile.defaults();
-        check(standard.contexts().size() == 6, "All contexts available");
+        check(standard.contexts().size() == 7, "All contexts available");
         check(standard.binding("UI", "ui.confirm").equals("A"), "Standard confirm");
         check(standard.binding("COMBAT", "combat.fire").equals("RT"), "Standard fire");
-        check(standard.contexts().values().stream().mapToInt(Map::size).sum() == 108, "Complete action catalog");
+        check(standard.contexts().values().stream().mapToInt(Map::size).sum() == 126, "Complete action catalog");
         Map<String,Map<String,String>> unordered=new HashMap<>();standard.contexts().forEach((context,bindings)->unordered.put(context,new HashMap<>(bindings)));
         BindingProfile loadedOrder=new BindingProfile("loaded","Loaded",unordered);
         for(String context:BindingProfile.CONTEXTS)check(new ArrayList<>(loadedOrder.bindings(context).keySet()).equals(new ArrayList<>(standard.bindings(context).keySet())),"Native remapping rows keep their order after unordered JSON imports");
@@ -48,6 +48,30 @@ public final class SettingsTests {
         check(standard.withSwap("UI", "ui.pointer", "RIGHT_STICK").binding("UI", "ui.scroll").equals("LEFT_STICK"), "Vector swap preserves both axes");
         Map<String, Map<String, String>> incomplete = standard.mutableCopy(); incomplete.remove("DEPLOYMENT");
         expect(IllegalArgumentException.class, () -> new BindingProfile("bad", "Bad", incomplete));
+    }
+    private static void refitMigration() throws Exception {
+        Path dir=Files.createTempDirectory("sectorpad-refit-migration-");ProfileStore store=new ProfileStore(dir);
+        BindingProfile custom=BindingProfile.southpaw().withSwap("UI","ui.confirm","B").renamed("custom","Custom");
+        store.save(ProfileStore.State.defaults().withActive(custom,ProfileStore.fingerprint(BindingProfile.defaults())));
+        Path file=dir.resolve("profiles.json");var document=new org.json.JSONObject(Files.readString(file));
+        var profiles=document.getJSONObject("profiles");
+        for(String id:List.of("default","southpaw","custom")){var profile=profiles.getJSONObject(id);profile.put("schemaVersion",1);profile.getJSONObject("contexts").remove("REFIT");}
+        Files.writeString(file,document.toString());String original=Files.readString(file);
+        var migrated=store.load();
+        check(migrated.activeId.equals("custom"),"Migration retains active profile");
+        for(var profile:migrated.profiles.values())check(profile.bindings("REFIT").equals(profile.bindings("UI")),"Each existing profile inherits its own UI bindings");
+        check(migrated.active().binding("REFIT","ui.confirm").equals("B"),"Custom confirm preserved in refit");
+        check(migrated.active().binding("COMBAT","combat.move").equals(custom.binding("COMBAT","combat.move")),"Migration leaves combat mapping intact");
+        check(Files.readString(file).equals(original),"Read migration preserves original storage");
+        SettingsService service=new SettingsService(store,new MutableSource(),()->1L);service.initialize();
+        check(!service.isPreviewing()&&service.activeProfile().equals(migrated.active()),"New default Luna context does not reset existing custom profile");service.close();
+        MutableSource nondefault=new MutableSource();nondefault.bindings=BindingProfile.defaults().withSwap("UI","ui.confirm","Y");
+        SettingsService existingLuna=new SettingsService(store,nondefault,()->1L);existingLuna.initialize();
+        check(!existingLuna.isPreviewing()&&existingLuna.activeProfile().equals(migrated.active()),"Existing nondefault Luna values do not overwrite migrated profiles");existingLuna.close();
+        Path exported=store.exportProfile(migrated.active());
+        check(store.importProfile(exported).equals(migrated.active()),"Migrated v2 export round trip");
+        var future=new org.json.JSONObject(Files.readString(exported));future.put("schemaVersion",3);Files.writeString(exported,future.toString());
+        expect(ProfileStore.FutureSchemaException.class,()->store.importProfile(exported));
     }
     private static void tuning() {
         Values values = new Values(); values.numbers.put("sp_pointer_speed", Double.NaN); values.numbers.put("sp_pointer_gamma", 999d);

@@ -7,6 +7,7 @@ import java.util.Map;
 
 /** A bounded snapshot of Luna's native preferences. Read on the game thread after Save. */
 public final class ControllerSettings {
+    public final boolean refitAutoOpen;
     public static final int SCHEMA_VERSION = 1;
     public static final String MOD_ID = "sectorpad";
     public interface Values {
@@ -68,6 +69,7 @@ public final class ControllerSettings {
         repeatInterval = number(values, "sp_repeat_interval", .09f, .04f, .5f);
         radialDeadzone = number(values, "sp_radial_deadzone", .35f, .1f, .8f);
         radialHoldSeconds = number(values, "sp_radial_hold", .25f, .1f, .75f);
+        refitAutoOpen = bool(values, "sp_refit_auto_open", true);
         uiScale = number(values, "sp_ui_scale", 1f, .75f, 1.8f);
         wheelSlots = Integer.parseInt(choice(values, "sp_wheel_slots", "8", List.of("4", "6", "8")));
         wheelHoldMode = bool(values, "sp_wheel_hold_mode", true);

@@ -41,6 +41,10 @@ public final class ReadOnlyUiNavigator {
     private float selectionPointerX=Float.NaN,selectionPointerY=Float.NaN;
     private String status="No active UI tree";
     private int visitedCount;
+    private final java.util.function.BiFunction<Object,Object,String> additionalTarget;
+    public ReadOnlyUiNavigator(){this((scope,node)->null);}
+    /** A version adapter may recognize specific native rows within the already-isolated modal. */
+    public ReadOnlyUiNavigator(java.util.function.BiFunction<Object,Object,String> additionalTarget){this.additionalTarget=java.util.Objects.requireNonNull(additionalTarget);}
 
     /** Returns the live title, combat, or campaign root without assigning any game field. */
     public Object discoverRoot() {
@@ -265,6 +269,9 @@ public final class ReadOnlyUiNavigator {
                 && cargo.getStack()!=null && !cargo.getStack().isEmpty() && cargo.isEnabled()) {
             PositionAPI position=cargo.getPosition();
             if(position!=null && position.getWidth()>=16 && position.getHeight()>=12) add(cargo,label(node),nearestScroller);
+        } else if(node instanceof UIComponentAPI component){
+            String label=additionalTarget.apply(focusRoot,node);
+            if(label!=null)add(component,label,nearestScroller);
         }
         // Scroll containers also contain descriptions, headings and decorative rows. Membership
         // in a scroll list does not prove an action exists; unknown custom rows retain pointer access.
@@ -277,7 +284,8 @@ public final class ReadOnlyUiNavigator {
         candidates.add(new Candidate(component,label==null || label.isBlank()?"Control":label,pos.getX(),pos.getY(),pos.getWidth(),pos.getHeight(),scroller));
     }
 
-    private float reveal(Candidate target) {
+    public float reveal(Candidate target) {
+        if(target==null||target.scroller()==null)return 0f;
         ScrollPanelAPI scroll=target.scroller();
         PositionAPI bounds=scroll.getPosition(), pos=target.component().getPosition();
         Object content=read(scroll,"getContentContainer");

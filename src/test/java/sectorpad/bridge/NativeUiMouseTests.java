@@ -23,6 +23,10 @@ public final class NativeUiMouseTests {
         events.clear();surface.focused=false;output.mouse(0,true);output.wheel(1);check(events.isEmpty(),"Focus loss emits no UI action");
         surface.focused=true;output.mouse(0,true);events.clear();Thread shutdown=new Thread(output::close);shutdown.start();shutdown.join();check(events.isEmpty()&&keyboard.closed,"Shutdown does not call game UI from another thread");
         check(keyboard.mouseCalls==0,"Local UI delivery never also injects an OS mouse event");
+        events.clear();surface.focused=true;
+        NativeUiMouseOutput hover=new NativeUiMouseOutput(keyboard,surface,port);hover.pointerMoved(3,4);
+        check(events.size()==1&&events.get(0).contains("MOUSE_MOVE"),"Unheld pointer movement reaches native hover-gated refit controls");
+        surface.focused=false;hover.pointerMoved(3,4);check(events.size()==1,"Focus loss blocks native hover");
         System.out.println("NativeUiMouseTests: 8 ownership, modifier, handoff, drag, focus, bounded-wheel and shutdown scenarios passed (API port doubles)");
     }
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}

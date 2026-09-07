@@ -15,7 +15,7 @@ public final class PreferenceResets {
         POINTER("Pointer", "sp_pointer_speed", "sp_pointer_gamma", "sp_pointer_deadzone", "sp_pointer_outer", "sp_precision", "sp_latched_drag"),
         SCROLL("Scrolling", "sp_scroll_speed", "sp_scroll_gamma", "sp_invert_scroll"),
         MAP("Map movement", "sp_map_pan_speed", "sp_zoom_speed"),
-        NAVIGATION("Navigation repeat", "sp_repeat_delay", "sp_repeat_interval"),
+        NAVIGATION("Navigation and refit", "sp_repeat_delay", "sp_repeat_interval", "sp_refit_auto_open"),
         WHEELS("Wheel behavior", "sp_wheel_slots", "sp_wheel_hold_mode", "sp_pause_wheels", "sp_radial_deadzone", "sp_radial_hold"),
         COMBAT("Combat steering and aim", "sp_steering_mode", "sp_aim_range", "sp_shield_toggle"),
         TRIGGER_BUTTONS("Trigger button thresholds", "sp_trigger_press", "sp_trigger_release"),

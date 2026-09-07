@@ -15,6 +15,7 @@ import sectorpad.ui.OverlayRenderer;
 import sectorpad.ui.OverlayLayout;
 import sectorpad.compat.ConsoleIntegration;
 import sectorpad.diagnostics.Diagnostics;
+import sectorpad.refit.*;
 import java.util.*;
 
 /** One game-thread owner coordinates the device, logical bindings, overlays and vanilla actions. */
@@ -25,8 +26,13 @@ public final class SectorPadRuntime implements AutoCloseable {
     private final DesktopInputBridge bridge=new DesktopInputBridge();
     private final GameActions game=new GameActions(this::ordinaryAction);
     private final CargoQuantityAdapter quantities=new CargoQuantityAdapter();
+    private final RefitAdapter refit=new RefitAdapter();
+    private final RefitSession refitSession=new RefitSession();
+    private final RefitWorkspace refitWorkspace=new RefitWorkspace();
+    private RefitAdapter.Snapshot refitSnapshot;
+    private long refitRefresh;
     private final ConsoleIntegration console=new ConsoleIntegration();
-    private final ReadOnlyUiNavigator navigator=new ReadOnlyUiNavigator();
+    private final ReadOnlyUiNavigator navigator=new ReadOnlyUiNavigator(RefitAdapter::nativeRowLabel);
     private final SettingsService settings=new SettingsService(ProfileStore.inCommonData());
     private final InputGate gate=new InputGate();
     private final MainMenuShortcuts menuShortcuts=new MainMenuShortcuts();
@@ -77,6 +83,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         catch(RuntimeException failure){Diagnostics.error("shutdown.hook_unavailable",failure);}
     }
     public void onGameLoad(){
+        refitSession.reset();refitSnapshot=null;
         initialize();cancelOverlays();settings.refresh();releaseInputs();
         // Loading is an expected clock gap, not a device disconnect or suspend/resume.
         clock.reset();lastAdvance=0;
@@ -124,8 +131,10 @@ public final class SectorPadRuntime implements AutoCloseable {
         Diagnostics.state("paused",Boolean.toString(context.paused()));
         Diagnostics.state("campaign_pointer",Boolean.toString(campaignPointer));
         if(changed){settings.revert("The screen changed; previous controls restored.");cancelOverlays();releaseInputs();navigator.clearSelection();campaignPointer=false;multiSelect=false;}
+        updateRefit(now,changed,focused,prefs);
         if(pauseChanged&&!hasModal())releaseInputs();
         if(raw.connected()&&wasConnected&&!raw.deviceId().equals(previousDevice)){
+            refitSession.suspend();
             Diagnostics.event("controller.changed");
             game.invalidatePauseResume();settings.revert("The controller changed; previous controls restored.");cancelOverlays();releaseInputs();requireReconnectAck=true;
             if(prefs.pauseOnDisconnect)game.requestPause();
@@ -139,6 +148,7 @@ public final class SectorPadRuntime implements AutoCloseable {
             if(owned){settings.revert("Input was interrupted; previous controls restored.");cancelOverlays();requireReconnectAck=raw.connected();if(prefs.pauseOnDisconnect)game.requestPause();}
         }
         if(!focused){
+            refitSession.suspend();
             menuShortcuts.update(calibrated,false);
             game.invalidatePauseResume();settings.revert("The game lost focus; previous controls restored.");bridge.pump(false,context.identity());cancelOverlays();releaseInputs();
             if(wasConnected&&prefs.pauseOnDisconnect)game.requestPause();return;
@@ -180,7 +190,7 @@ public final class SectorPadRuntime implements AutoCloseable {
             return;
         }
         if(!raw.connected()){
-            if(wasConnected){game.invalidatePauseResume();cancelOverlays();releaseInputs();settings.revert("Controller disconnected; previous controls restored.");
+            if(wasConnected){refitSession.suspend();game.invalidatePauseResume();cancelOverlays();releaseInputs();settings.revert("Controller disconnected; previous controls restored.");
                 requireReconnectAck=true;if(prefs.pauseOnDisconnect)game.requestPause();}
             wasConnected=false;bridge.pump(false,context.identity());return;
         }
@@ -204,6 +214,10 @@ public final class SectorPadRuntime implements AutoCloseable {
         }
         if(wheel.isOpen()||keyboard.isOpen()||confirmation!=null){
             bridge.pump(true,context.identity()+":overlay");updateModal(now,prefs);return;
+        }
+        if(refitSession.visible()){
+            bridge.pump(true,context.identity()+":refitworkspace");
+            refitInput(now,dt,prefs);return;
         }
         gate.updateOwner(context.identity()+":"+settings.activeProfile().id+":"+campaignPointer);
         boolean bridgeReady=bridge.pump(true,context.identity());
@@ -259,6 +273,86 @@ public final class SectorPadRuntime implements AutoCloseable {
         }else{
             game.neutralize();menuInput(profile,bindingContext,edges,now,dt,prefs);
         }
+    }
+    private void updateRefit(long now,boolean contextChanged,boolean focused,ControllerSettings prefs){
+        boolean before=refitSession.visible();
+        if(contextChanged||now-refitRefresh>150_000_000L){refitSnapshot=refit.refresh();refitRefresh=now;refitWorkspace.update(refitSnapshot);}
+        boolean ownModal=wheel.isOpen()||keyboard.isOpen()||confirmation!=null||remapPanel!=null;
+        refitSession.observe(refitSnapshot==null?null:refitSnapshot.owner(),refitSnapshot!=null&&refitSnapshot.blocked(),
+            controllerLastInput&&raw.connected()&&!requireReconnectAck&&prefs.refitAutoOpen,
+            focused&&prefs.enabled&&!ownModal&&!console.isOpen(),
+            Global.getCurrentState()==com.fs.starfarer.api.GameState.COMBAT,now);
+        if(before!=refitSession.visible()){releaseInputs();Diagnostics.event(refitSession.visible()?"refit.workspace.open":"refit.workspace.yield");}
+    }
+    public void openRefitWorkspace(){
+        cancelOverlays();releaseInputs();refitSnapshot=refit.refresh();refitWorkspace.update(refitSnapshot);
+        if(refitSnapshot==null||refitSnapshot.blocked()){notifyStatus(refitSnapshot==null?refit.status():"Finish the native dialog before opening the refit workspace.");return;}
+        refitSession.observe(refitSnapshot.owner(),false,false,true,false,System.nanoTime());refitSession.open();
+        Diagnostics.event("refit.workspace.open");
+    }
+    private void refitInput(long now,float dt,ControllerSettings prefs){
+        gate.updateOwner(context.identity()+":refitworkspace:"+settings.activeProfile().id);
+        if(!gate.armWhenNeutral(calibrated,.18f))return;
+        BindingProfile profile=settings.activeProfile();Set<String> held=new HashSet<>();profile.bindings("REFIT").forEach((a,b)->{if(calibrated.down(b))held.add(a);});
+        var edges=gate.edges(held);
+        if(edges.pressed("hub.open")){openHub();return;}
+        if(edges.pressed("ui.cancel")){if(!refitWorkspace.back()){refitSession.nativeMode();releaseInputs();}return;}
+        if(edges.pressed("game.menu")){refitSession.nativeMode();releaseInputs();defer(()->bridge.keyTap(Keyboard.KEY_ESCAPE));return;}
+        if(edges.pressed("ui.previousTab"))refitWorkspace.section(-1);
+        if(edges.pressed("ui.nextTab"))refitWorkspace.section(1);
+        if(edges.pressed("ui.tooltip"))refitWorkspace.details();
+        if(edges.pressed("ui.actions"))refitWorkspace.actions();
+        if(edges.pressed("ui.precision"))precision=!precision;
+        String direction=navigationDirection.choose(held);
+        if(navigation.pulse(direction,now,prefs.repeatDelay,prefs.repeatInterval))refitWorkspace.move(direction.equals("ui.up")?-1:direction.equals("ui.down")?1:direction.equals("ui.left")?-7:7);
+        float[] point=vector(profile.binding("REFIT","ui.pointer"),calibrated);pointer(point[0],point[1],dt,prefs);
+        if(Math.hypot(point[0],point[1])>prefs.pointerDeadzone)refitWorkspace.point(bridge.getPointerX(),bridge.getPointerY());
+        float[] scroll=vector(profile.binding("REFIT","ui.scroll"),calibrated);
+        int steps=scrolling.advance("refit-workspace",scroll[1]*prefs.scrollSpeed*(prefs.invertScroll?-1:1),dt);if(steps!=0)refitWorkspace.move(-steps);
+        if(edges.pressed("ui.confirm"))refitAction(refitWorkspace.activate());
+    }
+    private void processRefitEvent(InputEventAPI event){
+        if(event.isKeyDownEvent()){
+            int key=event.getEventValue();
+            physicalModalDispatch=true;
+            try{switch(key){
+                case Keyboard.KEY_ESCAPE -> {if(!refitWorkspace.back()){refitSession.nativeMode();releaseInputs();}}
+                case Keyboard.KEY_UP -> refitWorkspace.move(-1);
+                case Keyboard.KEY_DOWN -> refitWorkspace.move(1);
+                case Keyboard.KEY_LEFT,Keyboard.KEY_PRIOR -> refitWorkspace.section(-1);
+                case Keyboard.KEY_RIGHT,Keyboard.KEY_NEXT -> refitWorkspace.section(1);
+                case Keyboard.KEY_RETURN -> {if(!event.isRepeat())refitAction(refitWorkspace.activate());}
+                case Keyboard.KEY_F1 -> refitWorkspace.details();
+                default -> {if(key==settings.settings().hubKeycode)openHub();}
+            }}finally{physicalModalDispatch=false;}
+        }else if(event.isMouseDownEvent()&&!event.isDoubleClick()){
+            physicalModalDispatch=true;try{if(event.isRMBDownEvent()){if(!refitWorkspace.back()){refitSession.nativeMode();releaseInputs();}}else if(event.isLMBDownEvent())refitAction(refitWorkspace.click(event.getX(),event.getY()));}finally{physicalModalDispatch=false;}
+        }else if(event.isMouseScrollEvent())refitWorkspace.move(-Integer.signum(event.getEventValue()));
+    }
+    private void refitAction(String id){
+        if(id==null||id.isEmpty())return;
+        if(id.equals("choose-ships")){refitWorkspace.chooseShips();return;}
+        if(id.equals("native")){refitSession.nativeMode();releaseInputs();return;}
+        if(id.equals("hub")){openHub();return;}
+        if(id.equals("unavailable")){notifyStatus("Use Native refit for this control.");return;}
+        RefitAdapter.Intent intent=refit.capture(id);
+        if(intent==null){notifyStatus(refit.status());return;}
+        refitSession.handoff(System.nanoTime(),refit.current().action(id).dialog());releaseInputs();
+        // Text fields intentionally stay native until the user returns through the hub.
+        if(id.equals("name")||id.equals("variant-name")||id.equals("additional")||id.equals("officer"))refitSession.nativeMode();
+        boolean controllerOwned=!physicalModalDispatch;
+        defer(new Runnable(){
+            long readyAt;
+            public void run(){
+                if(readyAt==0){
+                    if(!refit.prepare(intent,bridge)){notifyStatus(refit.status());refitSession.nativeMode();return;}
+                    readyAt=System.nanoTime()+150_000_000L;
+                }else if(System.nanoTime()>=readyAt){
+                    if(!refit.activate(intent,bridge)){notifyStatus(refit.status());refitSession.nativeMode();}return;
+                }
+                defer(this);deferredControllerOwned=controllerOwned;
+            }
+        });
     }
     private PadFrame calibrate(PadFrame frame,ControllerSettings prefs){
         if(!frame.connected()){ltHeld=rtHeld=false;return frame;}
@@ -414,7 +508,9 @@ public final class SectorPadRuntime implements AutoCloseable {
         return game.actions(catalog).stream().map(a->new RadialModel.Entry(a.id,a.label,a.description,a.enabled,a.disabledReason,a.dangerous,a.execute)).toList();
     }
     public void openHub(){
+        refitSession.nativeMode();
         List<RadialModel.Entry> entries=new ArrayList<>();
+        if(context.is("REFIT"))entries.add(entry("refit-workspace","Controller workspace","Open the controller refit workspace",this::openRefitWorkspace));
         entries.add(entry("setup","Controller setup","LunaLib profiles, remapping and calibration",this::openSettings));
         entries.add(entry("keyboard","Keyboard","Type a name, search or save label",()->openKeyboard(false)));
         entries.add(entry("numeric","Number entry","Edit a focused numeric text field",()->openKeyboard(true)));
@@ -492,6 +588,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         });
     }
     public void openSettings(){
+        refitSession.nativeMode();
         Diagnostics.event("menu.setup");
         cancelOverlays();releaseInputs();acquirePause();
         remapPanel=new LunaRemappingPanel(settings,()->LunaRemappingPanel.InputState.fromFrames(calibrated,raw,Display.isActive()),this::closeSettings);
@@ -555,8 +652,14 @@ public final class SectorPadRuntime implements AutoCloseable {
     /** Hook before vanilla controls. Consumes only keys owned by a visible SectorPad modal. */
     public void processInput(List<InputEventAPI> events){
         if(closed)return;initialize();
+        boolean refitOwnedBatch=refitSession.visible();
         for(InputEventAPI event:events){
             if(event.isConsumed())continue;
+            if(refitOwnedBatch){
+                if(refitSession.visible())processRefitEvent(event);
+                if(event.isMouseEvent()||event.isKeyboardEvent())event.consume();
+                continue;
+            }
             if(remapPanel!=null){remapPanel.processInput(List.of(event));continue;}
             if(!hasModal()&&bridge.pendingCount()==0&&!physicalBridgeWork&&(event.isKeyDownEvent()||event.isMouseDownEvent()))controllerLastInput=false;
             if(context.is("COMBAT")&&!hasModal()&&(event.isMouseDownEvent()||(event.isKeyDownEvent()&&Set.of(Keyboard.KEY_W,Keyboard.KEY_A,Keyboard.KEY_S,Keyboard.KEY_D,Keyboard.KEY_Q,Keyboard.KEY_E).contains(event.getEventValue())))){
@@ -613,10 +716,17 @@ public final class SectorPadRuntime implements AutoCloseable {
             }
         }
     }
-    public boolean hasModal(){return wheel.isOpen()||keyboard.isOpen()||confirmation!=null||remapPanel!=null||quantities.isActive();}
+    public boolean hasModal(){return refitSession.visible()||wheel.isOpen()||keyboard.isOpen()||confirmation!=null||remapPanel!=null||quantities.isActive();}
     public void render(){
         if(!initialized||closed||!Display.isCreated()||!Display.isActive())return;
-        ControllerSettings prefs=settings.settings();float scale=Global.getSettings().getScreenScaleMult();
+        ControllerSettings prefs=settings.settings();
+        if(refitSession.visible()){
+            try {refitWorkspace.render(Global.getSettings().getScreenWidth(),Global.getSettings().getScreenHeight(),prefs.uiScale,
+                prompt("REFIT","ui.confirm")+" Select  "+prompt("REFIT","ui.cancel")+" Back  "+prompt("REFIT","ui.previousTab")+"/"+prompt("REFIT","ui.nextTab")+" Sections  "+prompt("REFIT","ui.tooltip")+" Details");}
+            catch(RuntimeException|LinkageError error){Diagnostics.error("refit.render",error);refitSession.nativeMode();releaseInputs();notifyStatus("Refit window unavailable; native refit remains available.");}
+            return;
+        }
+        float scale=Global.getSettings().getScreenScaleMult();
         if(scale<=0)scale=1;
         String dialogTitle=confirmation!=null?"Confirm "+confirmation.label():quantities.isActive()?"Selecting cargo quantity":null;
         String dialogBody=confirmation!=null?confirmation.description():quantities.isActive()?quantities.status():"";
@@ -691,6 +801,7 @@ public final class SectorPadRuntime implements AutoCloseable {
     private void releaseInputs(){bridge.releaseAll();game.neutralize();gate.disarm();scrolling.reset();zooming.reset();navigation.reset();navigationDirection.reset();latchedDrag=false;panning=false;pendingWheel=null;}
     private void defer(Runnable action){deferredAction=action;deferredContext=context.identity();deferredControllerOwned=!physicalModalDispatch;}
     public void emergencyStop(){
+        refitSession.reset();
         closed=true;
         FailureCleanup.run(failure->Diagnostics.error("runtime.cleanup",failure),
             game::invalidatePauseResume,bridge::releaseAll,game::neutralize,gate::disarm,
@@ -701,5 +812,5 @@ public final class SectorPadRuntime implements AutoCloseable {
     private static Set<String> pressed(Set<String> now,Set<String> before){Set<String> result=new HashSet<>(now);result.removeAll(before);return result;}
     private float controlAmount(String control){return "LT".equals(control)?calibrated.lt():"RT".equals(control)?calibrated.rt():calibrated.down(control)?1:0;}
     private static float[] vector(String name,PadFrame frame){return name.equals("LEFT_STICK")?new float[]{frame.lx(),frame.ly()}:name.equals("RIGHT_STICK")?new float[]{frame.rx(),frame.ry()}:new float[]{0,0};}
-    @Override public void close(){if(closed)return;cancelOverlays();releaseInputs();console.restore();settings.close();backend.close();bridge.close();closed=true;}
+    @Override public void close(){if(closed)return;refitSession.reset();cancelOverlays();releaseInputs();console.restore();settings.close();backend.close();bridge.close();closed=true;}
 }

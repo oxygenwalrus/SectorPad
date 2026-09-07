@@ -2,8 +2,8 @@
 """Make a separate local verification copy; never writes to the supplied installation."""
 import argparse, json, pathlib, shutil
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-p=argparse.ArgumentParser();p.add_argument('--game',required=True);p.add_argument('--console',action='store_true',help='Include installed Console Commands 4.0.9 in the isolated verification copy');p.add_argument('--no-sectorpad',action='store_true',help='Baseline comparison only; disable SectorPad in the isolated copy');args=p.parse_args()
-source=pathlib.Path(args.game).resolve();target=(ROOT/'build/verification/Starsector').resolve()
+p=argparse.ArgumentParser();p.add_argument('--game',required=True);p.add_argument('--console',action='store_true',help='Include installed Console Commands 4.0.9 in the isolated verification copy');p.add_argument('--no-sectorpad',action='store_true',help='Baseline comparison only; disable SectorPad in the isolated copy');p.add_argument('--target',help='Separate verification directory');args=p.parse_args()
+source=pathlib.Path(args.game).resolve();target=pathlib.Path(args.target).resolve() if args.target else (ROOT/'build/verification/Starsector').resolve()
 if target==source or source in target.parents:raise SystemExit('Verification must be outside the installed game')
 target.mkdir(parents=True,exist_ok=True)
 for original in (source/'starsector-core').rglob('*'):

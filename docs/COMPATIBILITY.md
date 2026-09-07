@@ -67,6 +67,10 @@ Combat uses normal ship commands and the existing game controls; no AI implement
 
 Core switching follows the encounter-owned core where present, skips disabled native tabs, and rejects nested dialogs and known public cargo-pickup/refit-picker state. The native-operation detector does not claim to recognize private warroom waiting state or every colony/custom-mod placement mode; no verified public getter for those was established. SectorPad's own held/latched input is guarded separately by the runtime. Pause ownership preserves a pause already present when SectorPad opens an overlay, but the game's boolean pause API cannot distinguish another mod silently reasserting the same pause value. These boundaries are described further in [game integration](GAME_INTEGRATION.md).
 
+## Controller refit workspace
+
+The additive refit companion now has an RC8 adapter, native transaction handoffs, a remappable REFIT context and profile migration. See [refit workspace usage and verification](REFIT_WORKSPACE.md) for the exact live journeys and remaining acceptance gates. These refit checks used keyboard/mouse in an isolated Windows game copy; they do not certify physical controller or third-party compatibility.
+
 ## Remaining acceptance work
 
 Before calling a device/platform combination production-ready, record an actual game run covering:

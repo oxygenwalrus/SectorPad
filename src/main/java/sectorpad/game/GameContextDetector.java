@@ -75,6 +75,7 @@ public final class GameContextDetector {
                     && (nativeModal == null || nativeModal == core)) {
                 return new GameContext("MAP", identity, false, sector.isPaused(), "Sector map");
             }
+            if (tab == CoreUITabId.REFIT && !menu && !codex) return new GameContext("REFIT", identity, false, sector.isPaused(), "Refit");
             return new GameContext("UI", identity, false, sector.isPaused(),
                     codex ? "Codex" : tab == null ? "Campaign menu" : display(tab.name()));
         }

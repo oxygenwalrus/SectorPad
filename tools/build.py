@@ -119,7 +119,7 @@ def jar_tree(destination, source, prefix=''):
                 archive.writestr(info,p.read_bytes())
 
 
-PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md')
+PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md','REFIT_WORKSPACE.md')
 SOURCE_VENDOR=('jamepad-2.30.0.0.jar','jamepad-2.30.0.0-sources.jar','jamepad-2.30.0.0.pom','gdx-jnigen-loader-2.2.0.jar','gamecontrollerdb-commit.txt')
 NATIVE_PAYLOADS=('windows-x86_64/jamepad64.dll','linux-x86_64/libjamepad64.so','windows-x86_64/sectorpad-input-windows-x86_64.dll')
 

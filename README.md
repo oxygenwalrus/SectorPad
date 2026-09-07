@@ -4,6 +4,8 @@ SectorPad adds controller input, a command hub, an on-screen keyboard, and LunaL
 
 **Validation status, 7 September 2026:** the mod builds and passes its automated checks. Isolated Windows game tests cover character text entry, exact cargo pickup/cancellation, profile persistence and rollback, wheel customization, native tactical orders, autopilot toggling, Console layout/text entry and controlled failure cleanup/export. These journeys used keyboard and mouse. A connected XInput controller is detected at startup, and the user confirmed physical X pause/unpause and campaign fleet movement after the context fix. Controller combat, mixed input and SteamOS operation remain unverified. The package version `1.0.1` is an identifier, not hardware or production certification. See [compatibility and evidence](docs/COMPATIBILITY.md).
 
+The [controller refit workspace](docs/REFIT_WORKSPACE.md) adds five fitting sections, ship/mount selection and native picker handoffs. Open it from the refit command hub, or automatically when controller input is active. Weapon/fighter fitting, allocation, undo, modules and simulation return have isolated Windows checks; physical refit acceptance remains pending.
+
 ## Install and open
 
 | Requirement | Target inspected for this build |

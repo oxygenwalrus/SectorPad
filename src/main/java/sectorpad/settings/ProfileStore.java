@@ -39,11 +39,15 @@ public final class ProfileStore {
     public static final class State {
         public final Map<String, BindingProfile> profiles;
         public final String activeId, nativeBindingFingerprint;
+        public final boolean migratedRefitBindings;
         public State(Map<String, BindingProfile> profiles, String activeId, String nativeBindingFingerprint) {
+            this(profiles,activeId,nativeBindingFingerprint,false);
+        }
+        private State(Map<String, BindingProfile> profiles, String activeId, String nativeBindingFingerprint,boolean migratedRefitBindings) {
             if (profiles == null || profiles.isEmpty() || profiles.size() > MAX_PROFILES || !profiles.containsKey(activeId)) throw new IllegalArgumentException("Invalid active profile or profile count.");
             profiles.forEach((id, profile) -> { if (!id.equals(profile.id)) throw new IllegalArgumentException("Profile ID mismatch."); });
             if (nativeBindingFingerprint == null || !(nativeBindingFingerprint.isEmpty() || nativeBindingFingerprint.matches("[0-9a-f]{64}"))) throw new IllegalArgumentException("Invalid native settings fingerprint.");
-            this.profiles = Collections.unmodifiableMap(new LinkedHashMap<>(profiles)); this.activeId = activeId; this.nativeBindingFingerprint = nativeBindingFingerprint;
+            this.profiles = Collections.unmodifiableMap(new LinkedHashMap<>(profiles)); this.activeId = activeId; this.nativeBindingFingerprint = nativeBindingFingerprint;this.migratedRefitBindings=migratedRefitBindings;
         }
         public static State defaults() { return new State(Map.of("default", BindingProfile.defaults(), "southpaw", BindingProfile.southpaw()), "default", ""); }
         public BindingProfile active() { return profiles.get(activeId); }
@@ -159,10 +163,13 @@ public final class ProfileStore {
         if (entries.length() == 0 || entries.length() > MAX_PROFILES) throw new IOException("Invalid profile count.");
         Map<String, BindingProfile> profiles = new LinkedHashMap<>();
         for (String id : names(entries)) profiles.put(id, decodeProfile(entries.getJSONObject(id)));
-        return new State(profiles, text(json, "activeProfileId"), text(json, "nativeBindingFingerprint"));
+        boolean migrated = false;
+        for (String id : names(entries)) migrated |= entries.getJSONObject(id).getInt("schemaVersion") == 1;
+        return new State(profiles, text(json, "activeProfileId"), text(json, "nativeBindingFingerprint"),migrated);
     }
     private static BindingProfile decodeProfile(JSONObject json) throws IOException, JSONException {
-        schema(json, BindingProfile.SCHEMA_VERSION, "Action profile");
+        int profileVersion = json.getInt("schemaVersion");
+        schema(json, profileVersion == 1 ? 1 : BindingProfile.SCHEMA_VERSION, "Action profile");
         JSONObject rawContexts = json.getJSONObject("contexts");
         Map<String, Map<String, String>> contexts = new LinkedHashMap<>();
         for (String context : names(rawContexts)) {
@@ -170,6 +177,8 @@ public final class ProfileStore {
             for (String action : names(rawBindings)) bindings.put(action, text(rawBindings, action));
             contexts.put(context, bindings);
         }
+        if (profileVersion == 1 && !contexts.containsKey("REFIT") && contexts.containsKey("UI"))
+            contexts.put("REFIT", new LinkedHashMap<>(contexts.get("UI")));
         return new BindingProfile(text(json, "id"), text(json, "displayName"), contexts);
     }
     private static Map<String, DeviceCalibration> decodeCalibrations(JSONObject json) throws IOException, JSONException {

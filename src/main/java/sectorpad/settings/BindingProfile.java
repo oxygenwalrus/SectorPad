@@ -12,8 +12,8 @@ import java.util.Set;
 
 /** Immutable logical bindings. Contains no game objects and is safe to persist outside saves. */
 public final class BindingProfile {
-    public static final int SCHEMA_VERSION = 1;
-    public static final List<String> CONTEXTS = List.of("UI", "CAMPAIGN", "COMBAT", "MAP", "TACTICAL", "DEPLOYMENT");
+    public static final int SCHEMA_VERSION = 2;
+    public static final List<String> CONTEXTS = List.of("UI", "CAMPAIGN", "COMBAT", "MAP", "TACTICAL", "DEPLOYMENT", "REFIT");
     public static final List<String> BUTTONS = List.of("A", "B", "X", "Y", "LB", "RB", "LT", "RT", "VIEW", "MENU", "L3", "R3", "DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT");
     public static final List<String> STICKS = List.of("LEFT_STICK", "RIGHT_STICK");
     public static final String NONE = "NONE";
@@ -143,7 +143,7 @@ public final class BindingProfile {
         result.put("UI", ordered("ui.confirm=A", "ui.cancel=B", "ui.secondary=X", "ui.actions=Y", "ui.previousTab=LB", "ui.nextTab=RB", "ui.previousSubtab=LT", "ui.nextSubtab=RT", "ui.precision=L3", "ui.tooltip=R3", "ui.up=DPAD_UP", "ui.down=DPAD_DOWN", "ui.left=DPAD_LEFT", "ui.right=DPAD_RIGHT", "ui.pointer=LEFT_STICK", "ui.scroll=RIGHT_STICK", "hub.open=VIEW", "game.menu=MENU"));
         result.put("CAMPAIGN", ordered("campaign.interact=A", "campaign.cancelCourse=B", "campaign.pause=X", "campaign.map=Y", "campaign.abilities=LB", "campaign.fastForward=RB", "campaign.zoomOut=LT", "campaign.zoomIn=RT", "campaign.previousTarget=DPAD_LEFT", "campaign.nextTarget=DPAD_RIGHT", "campaign.intel=DPAD_UP", "campaign.fleet=DPAD_DOWN", "campaign.pointerMode=L3", "campaign.recenter=R3", "campaign.move=LEFT_STICK", "campaign.pointer=RIGHT_STICK", "hub.open=VIEW", "game.menu=MENU"));
         result.put("COMBAT", ordered("combat.target=A", "combat.vent=B", "combat.autofire=X", "combat.tactical=Y", "combat.weapons=LB", "combat.system=RB", "combat.shield=LT", "combat.fire=RT", "combat.previousGroup=DPAD_LEFT", "combat.nextGroup=DPAD_RIGHT", "combat.fighters=DPAD_UP", "combat.autopilot=DPAD_DOWN", "combat.brake=L3", "combat.targetLock=R3", "combat.move=LEFT_STICK", "combat.aim=RIGHT_STICK", "hub.open=VIEW", "game.menu=MENU"));
-        for (String context : List.of("MAP", "TACTICAL", "DEPLOYMENT")) result.put(context, result.get("UI"));
+        for (String context : List.of("MAP", "TACTICAL", "DEPLOYMENT", "REFIT")) result.put(context, result.get("UI"));
         return Collections.unmodifiableMap(result);
     }
     private static Map<String, String> ordered(String... values) {

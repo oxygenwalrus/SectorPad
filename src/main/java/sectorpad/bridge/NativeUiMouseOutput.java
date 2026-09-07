@@ -57,9 +57,11 @@ final class NativeUiMouseOutput implements DesktopInputBridge.Output {
         }
     }
     @Override public void pointerMoved(float dx,float dy){
-        if(Thread.currentThread()!=gameThread||!surface.focused()||held.isEmpty())return;
+        if(Thread.currentThread()!=gameThread||!surface.focused())return;
         Object target=port.current();
-        if(target!=null&&held.containsValue(target))send(target,InputEventType.MOUSE_MOVE,-1,Math.round(dx),Math.round(dy));
+        // Native refit enables only the nearest mount in its mouse-move handler.
+        // Pointer positioning must deliver that ordinary hover before a queued click.
+        if(target!=null&&(held.isEmpty()||held.containsValue(target)))send(target,InputEventType.MOUSE_MOVE,-1,Math.round(dx),Math.round(dy));
     }
     private void send(Object target,InputEventType type,int value,int dx,int dy){port.send(target,type,value,dx,dy,Math.round(surface.pointerX()),Math.round(surface.pointerY()),modifiers);}
     private void releaseUi(){for(int button:new ArrayList<>(held.keySet()))mouse(button,false);held.clear();}
