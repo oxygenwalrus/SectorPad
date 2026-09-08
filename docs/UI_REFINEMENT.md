@@ -32,6 +32,20 @@ python tools/generate-hud-theme.py --check --preview build/modern-hud-preview.pn
 
 The offscreen tool needs the local game, LunaLib, LazyLib and a working LWJGL Pbuffer implementation. It has no visible-window fallback. The source package includes the harness, but does not include game fonts, ship textures or copied game libraries. Its default Windows installation path can be replaced with `--game`.
 
+## Device glyphs and reactive schematics (1.4.0)
+
+The same cyan/amber visual language now describes the current controller. Xbox has restrained familiar face-letter colors; Deck and Ally use monochrome ABXY lettering, with Deck L1/R1/L2/R2 shoulder markings. Generic devices use positional face symbols. View/Menu, stick-click and D-pad prompts have original vector icons. Refit, radial, keyboard and generated HUD legends resolve their controls from the effective profile.
+
+Controller Setup shows a controller silhouette or the corresponding handheld outline. Sticks move continuously, trigger bars show travel and held buttons fill. Mapped controls have quiet cyan rings; the selected action has an amber ring. The diagram stays neutral when disconnected. Its raw samples are deliberately separate from the calibrated mapping/capture input. Deck trackpads are passive shapes because the standard gamepad backend does not expose those contacts.
+
+Automatic appearance uses explicit recognizable names. XInput and Steam Virtual Gamepad may hide the hardware; the saved LunaLib Device appearance override selects the intended drawing without changing controller discovery or mappings. Device positioning was checked against [Valve's Deck controls](https://www.steamdeck.com/en/tech) and [ASUS's Ally controls](https://rog.asus.com/gaming-handhelds/rog-ally/rog-ally-2023/spec/); the line artwork is original and does not bundle manufacturer images or logos.
+
+![Reactive device schematics with synthetic input](evidence/device-schematics-offscreen-1280x800.png)
+
+![Device button glyphs and remapped prompt wrapping](evidence/device-glyphs-offscreen-1280x800.png)
+
+These component specimens use the production renderers with synthetic connected/disconnected frames. They do not establish live handheld acceptance or full native LunaLib composition. Run the same build and offscreen commands above to reproduce.
+
 ## Native skin boundary
 
 The same 57 verified panel, border, tab and chassis paths are used. Transparent centre tiles, tile gutters, side cutouts and the native power-button aperture remain intact. Only original mod-provided frame artwork and the existing session UI palette change; native text, indicators, icons, warning symbols, input semantics and saves retain their original behavior. [HUD skin coverage](HUD_SKIN.md) lists every family and compatibility boundary.

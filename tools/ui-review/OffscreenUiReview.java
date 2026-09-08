@@ -10,12 +10,17 @@ import org.lwjgl.opengl.PixelFormat;
 import org.lazywizard.lazylib.ui.LazyFont;
 import sectorpad.core.RadialModel;
 import sectorpad.core.TextEntryModel;
+import sectorpad.core.DeviceVisual;
+import sectorpad.core.PadFrame;
 import sectorpad.refit.RefitAdapter;
 import sectorpad.refit.RefitWorkspace;
 import sectorpad.ui.OverlayLayout;
 import sectorpad.ui.OverlayRenderer;
 import sectorpad.ui.TripadDrawing;
 import sectorpad.ui.TripadTheme;
+import sectorpad.ui.ControlGlyphs;
+import sectorpad.ui.DeviceDiagram;
+import sectorpad.ui.PromptRenderer;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -29,12 +34,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Test-only resource adapter. All GL geometry and text drawing is production code. */
 public final class OffscreenUiReview {
     private static int assertions;
     private static Path core, output;
     private static final Map<String, SpriteAPI> sprites = new HashMap<>();
+    private static final DeviceDiagram deviceDiagram=new DeviceDiagram();
+    private static final PromptRenderer prompts=new PromptRenderer();
 
     public static void main(String[] args) throws Exception {
         org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
@@ -57,8 +65,12 @@ public final class OffscreenUiReview {
                 for(float scale:new float[]{1f,1.8f})review(size[0],size[1],scale);
             }
             capture("shared-controls",1280,720,1,OffscreenUiReview::controlSamples);
+            capture("devices-live",1280,800,1,()->orthographic(1280,800,()->deviceSamples(800,true,false)));
+            capture("devices-bindings",1280,720,1,()->orthographic(1280,720,()->deviceSamples(720,false,false)));
+            capture("devices-disconnected",1280,720,1,()->orthographic(1280,720,()->deviceSamples(720,false,true)));
+            for(int height:new int[]{720,800})capture("device-glyphs-prompts",1280,height,1,()->orthographic(1280,height,()->glyphSamples(height)));
             String report="OffscreenUiReview: "+assertions+" assertions passed\nRenderer: "+GL11.glGetString(GL11.GL_RENDERER)
-                +"\nActual production OverlayRenderer/RefitWorkspace and LazyFont, local installed insignia fonts.\n"
+                +"\nActual production OverlayRenderer/RefitWorkspace/DeviceDiagram/ControlGlyphs/PromptRenderer and LazyFont, local installed insignia fonts.\n"
                 +"Synthetic fixture data and neutral background; no native game UI, input, mod compatibility, or physical-device validation.\n"
                 +"Resource adapter implements only read-only local streams and OpenGL sprite upload. Game installation untouched.\n";
             Files.writeString(output.resolve("EVIDENCE.txt"),report);System.out.print(report);
@@ -87,35 +99,113 @@ public final class OffscreenUiReview {
     }
     private static void review(int w,int h,float s)throws Exception{
         OverlayRenderer renderer=new OverlayRenderer();RadialModel wheel=new RadialModel();TextEntryModel keyboard=new TextEntryModel();
+        DeviceVisual visual=h==720?DeviceVisual.XBOX:h==800?DeviceVisual.STEAM_DECK:DeviceVisual.ROG_ALLY;
+        renderer.setDeviceVisual(visual);
         List<RadialModel.Entry> entries=new ArrayList<>();String[][] labels={{"refit","Refit fleet"},{"cargo","Cargo & storage"},{"map","Sector map"},{"fleet","Fleet management"},{"intel","Intelligence"},{"abilities","Abilities"},{"save","Quick save"},{"settings","Controller settings"}};
         for(int i=0;i<labels.length;i++)entries.add(new RadialModel.Entry(labels[i][0],labels[i][1],"Review your fleet's weapons, hull modifications and flux distribution. Select a ship, inspect its equipment, then return to the campaign.",i!=6,"Unavailable during this encounter",false,()->{}));
         wheel.open("Fleet command",entries,false,"BACK",8);wheel.navigate(1);
-        capture("radial",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"A Select  ·  B Back  ·  LB / RB Page",null,null,List.of(),null));
+        capture("radial",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"{pad:A} Select  ·  {pad:B} Back  ·  {pad:LB} / {pad:RB} Page",null,null,List.of(),null));
         OverlayLayout.Wheel geometry=OverlayLayout.wheel(w,h,s);
         for(int i=0;i<8;i++){double a=i*Math.PI/4;check(renderer.pointWheel(wheel,geometry.x()+(float)Math.sin(a)*geometry.radius()*.72f,geometry.y()+(float)Math.cos(a)*geometry.radius()*.72f),"wheel point accepted");check(wheel.selected()==i,"visual segment and hit selection agree");}
         check(!renderer.pointWheel(wheel,-1,-1),"outside wheel rejected");wheel.close();
         keyboard.open("ISS Meridian",false,96);keyboard.title("Rename flagship");keyboard.move(3,2);
-        capture("keyboard",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"A Type  ·  X Erase  ·  Y Shift  ·  Start Apply  ·  B Cancel",null,null,List.of(),null));
+        String keyboardFooter="{pad:A} Type   {pad:X} Erase   {pad:Y} Shift   {pad:LB}/{pad:RB} Caret   {pad:MENU} Apply   {pad:B} Cancel";
+        capture("keyboard",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,keyboardFooter,null,null,List.of(),null));
         OverlayLayout.Keyboard layout=OverlayLayout.keyboard(w,h,s,keyboard.rows(),false);
         for(var key:layout.keys()){var r=key.bounds();var hit=renderer.keyAt(r.x()+r.width()/2,r.y()+r.height()/2);check(hit!=null&&hit.row()==key.row()&&hit.column()==key.column(),"keyboard visual and hit agree");}
         check(renderer.keyAt(-1,-1)==null,"outside keyboard rejected");
         keyboard.docked(true);keyboard.title("Console command");
-        capture("keyboard-docked",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"A Type  ·  X Erase  ·  Start Apply  ·  B Cancel",null,null,List.of(),null));keyboard.close();
-        capture("dialog",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"A Confirm  ·  B Cancel","Controller ready","Your controller is connected. Review your bindings and return to the fleet when you are ready.",List.of(),null));
+        capture("keyboard-docked",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,keyboardFooter,null,null,List.of(),null));keyboard.close();
+        capture("dialog",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,null,"{pad:A} Confirm  ·  {pad:B} Cancel","Controller ready","Your controller is connected. Review your bindings and return to the fleet when you are ready.",List.of(),null));
         renderer.setNavigation(new OverlayRenderer.Pointer(w*.42f,h*.48f,true,false,false),new OverlayRenderer.Focus(w*.3f,h*.44f,270,42,false));
-        capture("hud",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,"Campaign navigation","X Pause  ·  Back Command wheel  ·  F10 Setup",null,null,List.of(),new OverlayRenderer.Aim(w*.68f,h*.55f,"ISS Resolute",true,true)));
-        RefitWorkspace refit=new RefitWorkspace();refit.update(snapshot());refit.move(1);
-        capture("refit",w,h,s,()->refit.render(w,h,s,"A Select  ·  B Back  ·  LB / RB Section  ·  Y Details"));
+        renderer.setBannerPrompts(true);
+        capture("hud",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,"Campaign travel · Left stick moves fleet · {pad:X} Pause","{pad:VIEW} Command hub   {pad:VIEW} + {pad:MENU} (hold) Recovery",null,null,List.of(),new OverlayRenderer.Aim(w*.68f,h*.55f,"ISS Resolute",true,true)));
+        renderer.setBannerPrompts(false);
+        capture("hud-literal-status",w,h,s,()->renderer.render(w,h,s,wheel,keyboard,"Saved profile: Fleet {pad:A} / X Wing","{pad:VIEW} Command hub   {pad:VIEW} + {pad:MENU} (hold) Recovery",null,null,List.of(),null));
+        RefitWorkspace refit=new RefitWorkspace();refit.setDeviceVisual(visual);refit.update(snapshot());refit.move(1);
+        capture("refit",w,h,s,()->refit.render(w,h,s,"{pad:A} Select  ·  {pad:B} Back  ·  {pad:LB} / {pad:RB} Section  ·  {pad:R3} Details"));
         var hitsField=RefitWorkspace.class.getDeclaredField("hits");hitsField.setAccessible(true);
         @SuppressWarnings("unchecked") List<RefitWorkspace.Hit> hits=(List<RefitWorkspace.Hit>)hitsField.get(refit);
         for(var hit:List.copyOf(hits)){var r=hit.bounds();check(r.valid()&&r.x()>=0&&r.y()>=0&&r.right()<=w&&r.top()<=h,"refit hit stays in viewport: "+hit.id());}
         check(!hits.isEmpty(),"refit produces input geometry");
-        refit.section(2);capture("refit-stats",w,h,s,()->refit.render(w,h,s,"A Select  ·  B Back  ·  LB / RB Section  ·  Y Details"));
+        refit.section(2);capture("refit-stats",w,h,s,()->refit.render(w,h,s,"{pad:A} Select  ·  {pad:B} Back  ·  {pad:LB} / {pad:RB} Section  ·  {pad:R3} Details"));
     }
     private static RefitAdapter.Snapshot snapshot(){
         List<RefitAdapter.Item> mounts=List.of(new RefitAdapter.Item("mount:1","Heavy Autocannon","Medium ballistic · Forward arc. Sustained kinetic fire pressures enemy shields at medium range; coordinate with your energy weapon groups.","mount:1",80,0,true),new RefitAdapter.Item("mount:2","Pulse Laser","Medium energy · Port mount","mount:2",5,50,true),new RefitAdapter.Item("mount:3","Pulse Laser","Medium energy · Starboard mount","mount:3",5,-50,true));
         List<RefitAdapter.Action> actions=new ArrayList<>();for(String id:List.of("mount:1","mount:2","mount:3","officer","name","hullmods","smods","vents+","vents-","caps+","caps-","groups","autofit","save","undo","strip","restore","simulation","variant-name","next-op","additional"))actions.add(new RefitAdapter.Action(id,switch(id){case "vents+"->"Add flux vent";case "vents-"->"Remove flux vent";case "caps+"->"Add capacitor";case "caps-"->"Remove capacitor";case "officer"->"Assign officer";case "name"->"Rename ship";default->id;},true,"",true));
         return new RefitAdapter.Snapshot(new Object(),new Object(),new Object(),null,"review","meridian","ISS Meridian","Eagle-class Cruiser","graphics/ships/eagle/eagle_base.png",27,155,30,15,List.of(),mounts,List.of(),List.of(),List.of("Hull integrity: 10,000","Armor rating: 1,000","Flux capacity: 15,000","Flux dissipation: 750 / sec","Shield efficiency: 0.8 flux / damage","Maximum speed: 50"),actions,"All standard controls available");
+    }
+    private static final DeviceVisual[] DEVICES={DeviceVisual.XBOX,DeviceVisual.STEAM_DECK,DeviceVisual.ROG_ALLY,DeviceVisual.GENERIC};
+    private static final String[] DEVICE_NAMES={"Xbox controller","Steam Deck","ROG Ally","Unknown controller"};
+    private static void deviceSamples(int height,boolean live,boolean disconnected){
+        label("SECTORPAD / DEVICE SCHEMATICS",44,height-35,25,TripadTheme.INK);
+        label(disconnected?"Disconnected: controls neutral after a live sample":live?"Live input: both triggers, asymmetric stick motion, held buttons":"Current bindings: mapped controls with one focused action",44,height-66,17,TripadTheme.MUTED);
+        float cardHeight=height==800?310:270;
+        for(int i=0;i<DEVICES.length;i++){
+            float x=40+(i%2)*620,y=height-108-(i/2)*(cardHeight+24)-cardHeight;
+            TripadDrawing.frame(x,y,600,cardHeight,1);
+            label(DEVICE_NAMES[i],x+20,y+cardHeight-20,21,TripadTheme.CYAN);
+            float diagramHeight=height==800?242:200;
+            PadFrame frame=disconnected?PadFrame.disconnected():samplePad(DEVICE_NAMES[i],live);
+            Set<String> mapped=disconnected?Set.of():Set.of("A","B","LB","RT","LEFT_STICK","RIGHT_STICK","DPAD_UP","MENU");
+            DeviceVisual visual=DEVICES[i];String selected=disconnected?null:i%2==0?"RT":"RIGHT_STICK";
+            componentState("device "+visual,()->deviceDiagram.render(x+40,y+25,520,diagramHeight,visual,frame,mapped,selected,1));
+        }
+        label("Production vector rendering · synthetic snapshots · no physical-device claim",44,28,15,TripadTheme.MUTED);
+    }
+    private static PadFrame samplePad(String name,boolean live){
+        return new PadFrame(true,"offscreen-fixture",name,true,live?.72f:0,live?-.54f:0,live?-.65f:0,live?.8f:0,
+            live?.84f:0,live?.61f:0,live?Set.of("A","Y","LB","L3","DPAD_RIGHT"):Set.of());
+    }
+    private static void glyphSamples(int height){
+        label("SECTORPAD / DEVICE GLYPHS & REMAPPED PROMPTS",44,height-35,25,TripadTheme.INK);
+        label("Native insignia font · controller-specific shoulders and utility icons · deliberate wrapping",44,height-67,17,TripadTheme.MUTED);
+        String[] controls={"A","B","X","Y","LB","RB","LT","RT","VIEW","MENU","L3","R3","DPAD_UP","DPAD_RIGHT","LEFT_STICK","RIGHT_STICK"};
+        for(int i=0;i<DEVICES.length;i++){
+            float top=height-104-i*((height-133)/4f),rowHeight=(height-133)/4f-12;
+            TripadDrawing.frame(40,top-rowHeight,1200,rowHeight,1);
+            label(DEVICE_NAMES[i],58,top-15,19,TripadTheme.CYAN);
+            for(int j=0;j<controls.length;j++){
+                float width=ControlGlyphs.width(controls[j],DEVICES[i],24);
+                check(Float.isFinite(width)&&width>0,"Glyph has finite advance: "+DEVICES[i]+" "+controls[j]);
+                String control=controls[j];DeviceVisual visual=DEVICES[i];float cx=302+j*57;boolean active=j%3==0;
+                componentState("glyph "+control,()->ControlGlyphs.draw(control,visual,cx,top-28,24,active,1));
+            }
+            prompts.draw("{pad:RB} + {pad:DPAD_RIGHT} Next equipment bank  ·  {pad:LT} Hold precision aim  ·  {pad:MENU} Apply current configuration",
+                60,top-59,18,TripadTheme.INK,590,rowHeight-65,false,DEVICES[i]);
+            prompts.draw("{pad:VIEW} + {pad:R3} Open controller settings  ·  {pad:LB} / {pad:RT} Switch inspection section  ·  {pad:B} Return to fleet",
+                688,top-59,18,TripadTheme.INK,524,rowHeight-65,false,DEVICES[i]);
+        }
+        componentState("short-height prompt",()->prompts.draw("{pad:LB} + {pad:RIGHT_STICK} Remapped aim · A, X, L1 and {pad:UNKNOWN} stay literal",
+            44,24,20,TripadTheme.MUTED,1180,16,false,DeviceVisual.GENERIC));
+        componentState("narrow prompt",()->prompts.draw("{pad:RIGHT_STICK}",1218,height-66,24,TripadTheme.CYAN,14,16,false,DeviceVisual.GENERIC));
+    }
+    private static void label(String value,float x,float top,float size,java.awt.Color ink){
+        try{var text=LazyFont.loadFont("graphics/fonts/insignia21LTaa.fnt").createText();text.setFontSize(size);text.setBaseColor(ink);text.setText(value);text.draw(x,top);}
+        catch(Exception e){throw new IllegalStateException(e);}
+    }
+    private static void orthographic(int width,int height,Runnable render){
+        int matrix=GL11.glGetInteger(GL11.GL_MATRIX_MODE);GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPushMatrix();GL11.glLoadIdentity();GL11.glOrtho(0,width,0,height,-1,1);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPushMatrix();GL11.glLoadIdentity();
+        try{
+            GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_CULL_FACE);GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);render.run();
+        }finally{
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPopMatrix();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPopMatrix();GL11.glMatrixMode(matrix);GL11.glPopAttrib();
+        }
+    }
+    private static void componentState(String name,Runnable render){
+        int mode=GL11.glGetInteger(GL11.GL_MATRIX_MODE),texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        float[] projection=matrix(GL11.GL_PROJECTION_MATRIX),model=matrix(GL11.GL_MODELVIEW_MATRIX);
+        boolean textured=GL11.glIsEnabled(GL11.GL_TEXTURE_2D),blended=GL11.glIsEnabled(GL11.GL_BLEND);
+        float lineWidth=GL11.glGetFloat(GL11.GL_LINE_WIDTH);render.run();
+        check(GL11.glGetError()==GL11.GL_NO_ERROR,"Direct component has no GL error: "+name);
+        check(GL11.glGetInteger(GL11.GL_MATRIX_MODE)==mode&&Arrays.equals(projection,matrix(GL11.GL_PROJECTION_MATRIX))
+            &&Arrays.equals(model,matrix(GL11.GL_MODELVIEW_MATRIX)),"Direct component restores matrices: "+name);
+        check(texture==GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)&&textured==GL11.glIsEnabled(GL11.GL_TEXTURE_2D)
+            &&blended==GL11.glIsEnabled(GL11.GL_BLEND)&&Math.abs(lineWidth-GL11.glGetFloat(GL11.GL_LINE_WIDTH))<.001f,
+            "Direct component restores drawing attributes: "+name);
     }
     private static void controlSamples(){
         int matrix=GL11.glGetInteger(GL11.GL_MATRIX_MODE);GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);

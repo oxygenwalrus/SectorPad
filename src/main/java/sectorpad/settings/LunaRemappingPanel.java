@@ -12,6 +12,9 @@ import lunalib.lunaUI.panel.LunaBaseCustomPanelPlugin;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 import sectorpad.ui.TripadDrawing;
+import sectorpad.ui.PromptRenderer;
+import sectorpad.ui.DeviceDiagram;
+import sectorpad.core.DeviceVisual;
 import sectorpad.core.PadFrame;
 import sectorpad.core.TouchGesture;
 import java.awt.Color;
@@ -35,6 +38,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         public final Set<String> buttons;
         public final float leftX, leftY, rightX, rightY, leftTrigger, rightTrigger;
         /** Unmodified device samples used only by the diagnostic diagram and calibration readouts. */
+        public final PadFrame rawFrame;
         public final Set<String> rawButtons;
         public final float rawLeftX, rawLeftY, rawRightX, rawRightY, rawLeftTrigger, rawRightTrigger;
         public final boolean connected, focused;
@@ -51,6 +55,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
             this.buttons = Collections.unmodifiableSet(copy);
             this.leftX = normalized.lx(); this.leftY = normalized.ly(); this.rightX = normalized.rx(); this.rightY = normalized.ry();
             this.leftTrigger = normalized.lt(); this.rightTrigger = normalized.rt();
+            this.rawFrame = raw;
             this.rawButtons = Collections.unmodifiableSet(new LinkedHashSet<>(raw.buttons()));
             this.rawLeftX = raw.lx(); this.rawLeftY = raw.ly(); this.rawRightX = raw.rx(); this.rawRightY = raw.ry();
             this.rawLeftTrigger = raw.lt(); this.rawRightTrigger = raw.rt();
@@ -67,6 +72,12 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
             return new PadFrame(connected, "", deviceName, true, leftX, leftY, rightX, rightY, leftTrigger, rightTrigger, copy);
         }
         public static InputState disconnected() { return new InputState(Set.of(), 0, 0, 0, 0, 0, 0, false, true, "No controller connected"); }
+        /** Effective action readout; diagnostic movement itself always comes from rawFrame. */
+        public boolean held(String control){
+            if(!connected)return false;
+            return "LEFT_STICK".equals(control)?Math.hypot(leftX,leftY)>.22:
+                "RIGHT_STICK".equals(control)?Math.hypot(rightX,rightY)>.22:buttons.contains(control);
+        }
         public boolean neutral() { return buttons.isEmpty() && Math.hypot(leftX, leftY) < .22 && Math.hypot(rightX, rightY) < .22 && leftTrigger < .15 && rightTrigger < .15; }
         String navigationDirection() { return buttons.contains("DPAD_UP") || leftY > .6f ? "UP" : buttons.contains("DPAD_DOWN") || leftY < -.6f ? "DOWN" : ""; }
         void sampleCapture(RemapCapture capture, long nowNanos) {
@@ -96,7 +107,9 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     private ClickTarget touchTarget;
     private record ClickTarget(LunaElement element, Runnable action) { }
     private CustomPanelAPI contentPanel;
-    private LabelAPI statusLabel, liveLabel, deviceLabel;
+    private LabelAPI statusLabel, liveLabel, deviceLabel, schemaLabel;
+    private final PromptRenderer prompts=new PromptRenderer();
+    private boolean compactLayout;
     private ControllerDiagram diagram;
     private Set<String> previous = Set.of();
     private long repeatAt;
@@ -360,13 +373,18 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         if (saved) { wheelMoving = wheelReset = false; wheelDraft = new ArrayList<>(service.wheelEntries(wheelId).stream().map(SettingsService.WheelItem::id).toList()); }
         dirty = true;
     }
+    record SetupLayout(boolean compact,float diagramHeight,float listTop,int pageSize,float footer) { }
+    static SetupLayout setupLayout(float height){
+        boolean compact=height<560;float diagramHeight=compact?110:200,listTop=diagramHeight+160;
+        return new SetupLayout(compact,diagramHeight,listTop,Math.max(1,(int)((height-listTop-86)/29)),height-75);
+    }
     private void rebuild() {
         dirty = false;
         touch.cancel(); touchTarget = null;
         clickTargets.clear();
         if (contentPanel != null) getPanel().removeComponent(contentPanel);
         float width = getPanel().getPosition().getWidth() - 24f, height = getPanel().getPosition().getHeight() - 20f;
-        boolean compact = height < 620;
+        SetupLayout layout=setupLayout(height);compactLayout=layout.compact();
         contentPanel = getPanel().createCustomPanel(width, height, null); getPanel().addComponent(contentPanel); contentPanel.getPosition().inTL(12, 10);
         TooltipMakerAPI ui = contentPanel.createUIElement(width, height, false); contentPanel.addUIElement(ui); ui.getPosition().inTL(0, 0);
         LabelAPI title = ui.addSectionHeading("SectorPad Controller Setup", Alignment.MID, 0); title.getPosition().inTL(0, 0);
@@ -375,55 +393,58 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
             int index = i;
             button(ui, BindingProfile.CONTEXTS.get(i), i * (tabWidth + 5), 27, tabWidth, 27, i == contextIndex && !profilesMode && !toolsMode && !wheelsMode, () -> { if (!isCapturing() && !service.isPreviewing() && !hasPending()) { contextIndex = index; profilesMode = toolsMode = wheelsMode = false; wheelId = null; wheelDraft.clear(); selected = 0; capture.reset(); dirty = true; } });
         }
-        float diagramWidth = Math.min(440f, width * .5f);
-        float diagramHeight = compact ? 110 : 145;
+        float diagramWidth = Math.min(520f, width * .54f);
+        float diagramHeight = layout.diagramHeight();
         diagram = new ControllerDiagram(ui, diagramWidth, diagramHeight); diagram.getPosition().inTL(0, 62);
         float infoX = diagramWidth + 12, infoWidth = width - infoX;
         LunaElement info = new LunaElement(ui, infoWidth, diagramHeight); info.getPosition().inTL(infoX, 62); info.setRenderBackground(false); info.setRenderBorder(false);
-        deviceLabel = info.getInnerElement().addPara("Controller", 0);
-        info.getInnerElement().addPara("Profile: " + draft.displayName + (compact ? "\nA / Enter: choose   Y: preview\nArrows: select / context   P: sections" : "\nD-pad / up-down: select\nLB-RB / left-right: context\nA / Enter: choose   X: unassign\nY: preview   View / P: sections"), 5f);
-        info.getInnerElement().addPara("Recovery: hold View + Menu for 2 seconds. Touch: tap on release; drag lists.", 7f, FOCUS);
+        // Fixed text bands prevent changing device names and schema labels from overlapping.
+        deviceLabel = info.getInnerElement().addPara("Controller", 0);deviceLabel.getPosition().inTL(0,0);
+        LabelAPI profileLabel=info.getInnerElement().addPara("Profile: " + shorten(shownProfile().displayName,compactLayout?30:42),0);profileLabel.getPosition().inTL(0,compactLayout?30:54);
+        schemaLabel=info.getInnerElement().addPara("Selected mapping",0,FOCUS);schemaLabel.getPosition().inTL(0,compactLayout?54:78);
+        LabelAPI legend=info.getInnerElement().addPara(compactLayout?"Amber: selected   Fill: live":"Amber ring: selected binding\nCyan ring: mapped   Fill: live input",0,MUTED);legend.getPosition().inTL(0,compactLayout?94:118);
+        if(!compactLayout){LabelAPI recovery=info.getInnerElement().addPara("D-pad: select   Bumpers: context\nHold View + Menu: recovery",0,FOCUS);recovery.getPosition().inTL(0,160);}
         liveLabel = ui.addPara("Live input", 0); liveLabel.getPosition().inTL(0, diagramHeight + 69);
-        statusLabel = ui.addPara("", 0); statusLabel.getPosition().inTL(0, diagramHeight + 92);
-        float listTop = compact ? 240 : 280, rowHeight = 29f;
-        pageSize = Math.max(1, (int) ((height - listTop - 86) / rowHeight));
+        statusLabel = ui.addPara("", 0); statusLabel.getPosition().inTL(0, diagramHeight + 112);
+        float listTop = layout.listTop(), rowHeight = 29f;
+        pageSize = layout.pageSize();
         if (wheelsMode) buildWheels(ui, width, listTop, rowHeight);
         else if (toolsMode) buildTools(ui, width, listTop, rowHeight);
         else if (profilesMode) buildProfiles(ui, width, listTop, rowHeight);
         else buildActions(ui, width, listTop, rowHeight);
-        float footer = height - 75, gap = 8, third = (width - 2 * gap) / 3;
+        float footer = layout.footer(), gap = 8, third = (width - 2 * gap) / 3;
         if (wheelsMode) {
-            button(ui, wheelId == null ? "A / Enter: Choose wheel" : "Y: Save wheel order", 0, footer, third, 30, false, wheelId == null ? this::activateWheel : this::saveWheelDraft);
-            button(ui, "B / Escape: Back", third + gap, footer, third, 30, false, this::cancelLocal);
-            button(ui, "Close", 2 * (third + gap), footer, third, 30, false, this::closePanel);
-            button(ui, "Bindings / View / P", 0, footer + 36, third, 27, false, this::nextSection);
-            button(ui, "X: Draft default order", third + gap, footer + 36, third, 27, false, this::secondary);
-            button(ui, wheelMoving ? "A / Enter: Place command" : "A / Enter: Move command", 2 * (third + gap), footer + 36, third, 27, wheelMoving, this::activateWheel);
+            promptButton(ui, wheelId == null ? "{pad:A} / Enter: Choose wheel" : "{pad:Y}: Save wheel order", 0, footer, third, 30, false, wheelId == null ? this::activateWheel : this::saveWheelDraft);
+            promptButton(ui, "{pad:B} / Escape: Back", third + gap, footer, third, 30, false, this::cancelLocal);
+            promptButton(ui, "Close", 2 * (third + gap), footer, third, 30, false, this::closePanel);
+            promptButton(ui, "Bindings / {pad:VIEW} / P", 0, footer + 36, third, 27, false, this::nextSection);
+            promptButton(ui, "{pad:X}: Draft default order", third + gap, footer + 36, third, 27, false, this::secondary);
+            promptButton(ui, wheelMoving ? "{pad:A} / Enter: Place command" : "{pad:A} / Enter: Move command", 2 * (third + gap), footer + 36, third, 27, wheelMoving, this::activateWheel);
             return;
         }
-        String primary = pendingTool != null ? "A / Enter: Confirm reset" : pendingDelete != null ? "A / Enter: Confirm delete" : service.isPreviewing() ? "A / Enter: Keep controls" : capture.stage() == RemapCapture.Stage.CONFLICT ? "A / Enter: Swap controls" : "Y: Preview draft";
+        String primary = pendingTool != null ? "{pad:A} / Enter: Confirm reset" : pendingDelete != null ? "{pad:A} / Enter: Confirm delete" : service.isPreviewing() ? "{pad:A} / Enter: Keep controls" : capture.stage() == RemapCapture.Stage.CONFLICT ? "{pad:A} / Enter: Swap controls" : "{pad:Y}: Preview draft";
         Runnable primaryAction;
         if (pendingTool != null) { SetupTool expected = pendingTool; primaryAction = () -> { if (pendingTool == expected) activate(); }; }
         else if (pendingDelete != null) { String expectedDelete = pendingDelete; primaryAction = () -> { if (expectedDelete.equals(pendingDelete)) activate(); }; }
         else if (service.isPreviewing()) { BindingProfile expectedPreview = service.activeProfile(); primaryAction = () -> { if (service.isPreviewing() && expectedPreview.equals(service.activeProfile())) activate(); }; }
         else if (capture.stage() == RemapCapture.Stage.CONFLICT) primaryAction = () -> { if (capture.stage() == RemapCapture.Stage.CONFLICT) activate(); };
         else primaryAction = this::previewDraft;
-        button(ui, primary, 0, footer, third, 30, service.isPreviewing(), primaryAction);
-        button(ui, hasPending() ? "B / Escape: Cancel" : service.isPreviewing() ? "B: Revert controls" : "Restore standard draft", third + gap, footer, third, 30, false, () -> {
+        promptButton(ui, primary, 0, footer, third, 30, service.isPreviewing(), primaryAction);
+        promptButton(ui, hasPending() ? "{pad:B} / Escape: Cancel" : service.isPreviewing() ? "{pad:B}: Revert controls" : "Restore standard draft", third + gap, footer, third, 30, false, () -> {
             if (service.isPreviewing() || hasPending()) cancelLocal();
             else { capture.reset(); draft = BindingProfile.defaults(); profilesMode = toolsMode = false; service.report("Standard controls loaded into the draft. Preview before saving."); dirty = true; }
         });
-        button(ui, "Close / Escape", 2 * (third + gap), footer, third, 30, false, this::closePanel);
-        button(ui, (profilesMode ? "Tools" : toolsMode ? "Wheels" : "Profiles") + " / View / P", 0, footer + 36, third, 27, profilesMode || toolsMode, this::nextSection);
-        button(ui, "Save device calibration", third + gap, footer + 36, third, 27, false, () -> { if (!hasPending() && !service.isPreviewing() && !isCapturing()) service.applyLunaCalibrationToDevice(); });
-        button(ui, "Reconnect controller", 2 * (third + gap), footer + 36, third, 27, false, () -> { if (!hasPending()) reconnectController(); });
+        promptButton(ui, "Close / Escape", 2 * (third + gap), footer, third, 30, false, this::closePanel);
+        promptButton(ui, (profilesMode ? "Tools" : toolsMode ? "Wheels" : "Profiles") + " / {pad:VIEW} / P", 0, footer + 36, third, 27, profilesMode || toolsMode, this::nextSection);
+        promptButton(ui, "Save device calibration", third + gap, footer + 36, third, 27, false, () -> { if (!hasPending() && !service.isPreviewing() && !isCapturing()) service.applyLunaCalibrationToDevice(); });
+        promptButton(ui, "Reconnect controller", 2 * (third + gap), footer + 36, third, 27, false, () -> { if (!hasPending()) reconnectController(); });
     }
     private void buildActions(TooltipMakerAPI ui, float width, float top, float rowHeight) {
         List<String> actions = actions(); int start = selected / pageSize * pageSize;
         for (int i = start; i < Math.min(actions.size(), start + pageSize); i++) {
             String action = actions.get(i); int index = i;
-            String label = (i == selected ? "> " : "  ") + BindingProfile.actionLabel(action) + "   [" + sectorpad.core.ButtonLabels.label(draft.binding(context(), action),service.settings().glyphStyle,latest.deviceName) + "]";
-            button(ui, label, 0, top + (i - start) * rowHeight, width - 92, rowHeight - 3, i == selected, () -> { if (!hasPending() && !isCapturing() && !service.isPreviewing()) { selected = index; activate(); } });
+            String label = BindingProfile.actionLabel(action) + "   " + PromptRenderer.token(shownProfile().binding(context(), action));
+            promptButton(ui, label, 0, top + (i - start) * rowHeight, width - 92, rowHeight - 3, i == selected, () -> { if (!hasPending() && !isCapturing() && !service.isPreviewing()) { selected = index; activate(); } });
         }
         button(ui, "Up", width - 84, top, 84, 27, false, () -> select(-1));
         button(ui, "Down", width - 84, top + 33, 84, 27, false, () -> select(1));
@@ -436,7 +457,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
             BindingProfile profile = profiles.get(i); int index = i;
             button(ui, profile.displayName + " [" + profile.id + "]" + (profile.id.equals(service.committedProfile().id) ? "  saved active" : ""), 0, top + (i - start) * rowHeight, width - 180, rowHeight - 3, i == profileSelected, () -> { if (!hasPending() && !service.isPreviewing()) { profileSelected = index; activate(); } });
         }
-        button(ui, "X: Duplicate current", width - 170, top, 170, 29, false, this::secondary);
+        promptButton(ui, "{pad:X}: Duplicate current", width - 170, top, 170, 29, false, this::secondary);
         button(ui, "Delete selected", width - 170, top + 35, 170, 29, false, this::requestDelete);
     }
     private void buildTools(TooltipMakerAPI ui, float width, float top, float rowHeight) {
@@ -472,19 +493,31 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         button(ui, "Up", width - 84, top, 84, 27, false, () -> select(-1));
         button(ui, "Down", width - 84, top + 33, 84, 27, false, () -> select(1));
     }
+    private DeviceVisual visual(){return DeviceVisual.resolve(service.settings().glyphStyle,latest.deviceName);}
+    private BindingProfile shownProfile(){return service.isPreviewing()?service.activeProfile():draft;}
     private void updateLive() {
-        if (diagram == null) return; diagram.update(latest);
-        String device=latest.connected?latest.deviceName+" · "+service.controllerStatus():service.controllerStatus();
-        deviceLabel.setText(shorten(device, 82) + (latest.focused ? "" : " — focus lost"));
-        BindingProfile shown = service.isPreviewing() ? service.activeProfile() : draft;
+        if (diagram == null) return;
+        BindingProfile shown=shownProfile();
+        String selectedControl=profilesMode||toolsMode||wheelsMode?BindingProfile.NONE:shown.binding(context(),selectedAction());
+        Set<String> mapped=new LinkedHashSet<>(shown.bindings(context()).values());mapped.remove(BindingProfile.NONE);
+        diagram.update(latest.rawFrame,visual(),mapped,selectedControl);
+        schemaLabel.setText(profilesMode||toolsMode||wheelsMode?"Showing "+context().toLowerCase(Locale.ROOT)+" bindings":BindingProfile.actionLabel(selectedAction())+" : "+visual().label(selectedControl));
+        String source="Automatic".equals(service.settings().glyphStyle)?visual()==DeviceVisual.GENERIC?"Unknown model: set Device appearance in LunaLib":"Detected: "+shorten(latest.deviceName,36):"Appearance override: "+shorten(latest.deviceName,30);
+        deviceLabel.setText(compactLayout?visual().displayName()+(latest.connected?"":" - Offline"):visual().displayName()+" - "+(latest.connected?"Connected":"Disconnected")+"\n"+source+(latest.focused?"":" - focus lost"));
         List<String> matches = new ArrayList<>();
-        shown.bindings(context()).forEach((action, control) -> { if (latest.buttons.contains(control)) matches.add(BindingProfile.actionLabel(action)); });
-        liveLabel.setText(wheelsMode ? wheelId == null ? "Wheel order: choose a wheel to customize for " + service.committedProfile().displayName : "Wheel: " + wheelId + "   A / Enter: " + (wheelMoving ? "place" : "move") + "   Up/down: " + (wheelMoving ? "reorder" : "select") + "   Y: save" : String.format(Locale.ROOT, "Raw LT %.2f  RT %.2f   %s: %s", latest.rawLeftTrigger, latest.rawRightTrigger, context().toLowerCase(Locale.ROOT), matches.isEmpty() ? "release controls to see the next input" : String.join(", ", matches)));
+        shown.bindings(context()).forEach((action, control) -> { if (latest.held(control)) matches.add(BindingProfile.actionLabel(action)); });
+        liveLabel.setText(wheelsMode ? wheelId == null ? "Wheel order: choose a wheel to customize for " + service.committedProfile().displayName : "Wheel: " + wheelId + "   A / Enter: " + (wheelMoving ? "place" : "move") + "   Up/down: " + (wheelMoving ? "reorder" : "select") + "   Y: save" : String.format(Locale.ROOT, "Raw L %+.2f %+.2f  R %+.2f %+.2f  LT %.2f RT %.2f\n%s", latest.rawLeftX,latest.rawLeftY,latest.rawRightX,latest.rawRightY,latest.rawLeftTrigger,latest.rawRightTrigger, matches.isEmpty()?"No mapped action held":shorten(String.join(", ", matches),compactLayout?80:110)));
         String status = service.isPreviewing() ? String.format(Locale.ROOT, "PREVIEW — %.0f seconds remaining. A keeps these controls; B restores the previous profile.", Math.ceil(service.previewSecondsRemaining())) : service.status();
-        statusLabel.setText(shorten(status, 175)); statusLabel.setColor(service.isPreviewing() ? FOCUS : INK);
+        statusLabel.setText(shorten(status,compactLayout?95:130)); statusLabel.setColor(service.isPreviewing() ? FOCUS : INK);
     }
     private static String shorten(String value, int limit) { return value.length() <= limit ? value : value.substring(0, limit - 1) + "…"; }
-    private void button(TooltipMakerAPI ui, String text, float x, float y, float width, float height, boolean selected, Runnable action) {
+    private void button(TooltipMakerAPI ui,String text,float x,float y,float width,float height,boolean selected,Runnable action){
+        button(ui,text,x,y,width,height,selected,action,false);
+    }
+    private void promptButton(TooltipMakerAPI ui,String text,float x,float y,float width,float height,boolean selected,Runnable action){
+        button(ui,text,x,y,width,height,selected,action,true);
+    }
+    private void button(TooltipMakerAPI ui, String text, float x, float y, float width, float height, boolean selected, Runnable action,boolean glyphs) {
         LunaElement element = new LunaElement(ui, width, height) {
             @Override public void renderBelow(float alphaMult) {
                 super.renderBelow(alphaMult);
@@ -496,6 +529,14 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
                     TripadDrawing.control(p.getX(),p.getY(),p.getWidth(),p.getHeight(),1,selected,isHovering(),alphaMult);
                 }finally{GL11.glPopAttrib();}
             }
+            @Override public void render(float alphaMult) {
+                super.render(alphaMult);
+                if(glyphs&&alphaMult>0){
+                    var p=getPosition();float size=15, lineHeight=size*1.25f;
+                    prompts.draw(text,p.getX()+p.getWidth()/2,p.getY()+(p.getHeight()+lineHeight)/2,size,
+                        alpha(selected?FOCUS:INK,Math.round(255*Math.max(0,Math.min(1,alphaMult)))),p.getWidth()-14,lineHeight,true,visual());
+                }
+            }
             @Override public void onClick(InputEventAPI event) {
                 // LunaElement dispatches even consumed events and all mouse buttons.
                 if (closed || event.isConsumed() || !event.isLMBDownEvent() || event.isDoubleClick()) return;
@@ -505,40 +546,23 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         element.getPosition().inTL(x, y); element.setSelectionGroup("sectorpad.setup");
         clickTargets.add(new ClickTarget(element, action));
         element.setRenderBackground(false);element.setRenderBorder(false);
-        element.addText(text, selected ? FOCUS : INK, FOCUS, List.of()); element.centerText();
+        if(!glyphs){element.addText(text, selected ? FOCUS : INK, FOCUS, List.of()); element.centerText();}
     }
     private static final class ControllerDiagram extends LunaElement {
-        private final Map<String, LunaElement> controls = new LinkedHashMap<>();
-        private final LunaElement leftStick, rightStick;
-        private final float verticalScale;
-        ControllerDiagram(TooltipMakerAPI ui, float width, float height) {
-            super(ui, width, height); verticalScale = height / 145f; setRenderBackground(false); setRenderBorder(false);
-            float unit = width / 10f;
-            tile("LT", .1f * unit, 0, 1.1f * unit, 23); tile("LB", 1.3f * unit, 0, 1.1f * unit, 23);
-            tile("RB", 7.6f * unit, 0, 1.1f * unit, 23); tile("RT", 8.8f * unit, 0, 1.1f * unit, 23);
-            tile("VIEW", 3.5f * unit, 29, 1.4f * unit, 24); tile("MENU", 5.1f * unit, 29, 1.4f * unit, 24);
-            tile("Y", 8f * unit, 30, .8f * unit, 22); tile("X", 7.1f * unit, 54, .8f * unit, 22);
-            tile("B", 8.9f * unit, 54, .8f * unit, 22); tile("A", 8f * unit, 78, .8f * unit, 22);
-            tile("DPAD_UP", 1.6f * unit, 80, 1.1f * unit, 19); tile("DPAD_LEFT", .4f * unit, 101, 1.1f * unit, 19);
-            tile("DPAD_RIGHT", 2.8f * unit, 101, 1.1f * unit, 19); tile("DPAD_DOWN", 1.6f * unit, 122, 1.1f * unit, 19);
-            tile("L3", .6f * unit, 29, .8f * unit, 22); tile("R3", 6.3f * unit, 115, .8f * unit, 22);
-            leftStick = analog("Left stick", .1f * unit, 54, 3.3f * unit, 24);
-            rightStick = analog("Right stick", 4.7f * unit, 86, 3.2f * unit, 24);
+        private final DeviceDiagram renderer=new DeviceDiagram();
+        private PadFrame raw=PadFrame.disconnected();
+        private DeviceVisual visual=DeviceVisual.GENERIC;
+        private Set<String> mapped=Set.of();
+        private String selected=BindingProfile.NONE;
+        ControllerDiagram(TooltipMakerAPI ui,float width,float height){
+            super(ui,width,height);setRenderBackground(false);setRenderBorder(false);
         }
-        private void tile(String name, float x, float y, float width, float height) {
-            LunaElement tile = new LunaElement(getInnerElement(), width, height * verticalScale); tile.getPosition().inTL(x, y * verticalScale);
-            String label = name.replace("DPAD_", "").replace("LEFT", "<").replace("RIGHT", ">").replace("UP", "^").replace("DOWN", "v");
-            tile.setBackgroundColor(FIELD);tile.setBorderColor(STEEL);
-            tile.addText(label, INK, FOCUS, List.of()); tile.centerText(); controls.put(name, tile);
+        void update(PadFrame raw,DeviceVisual visual,Set<String> mapped,String selected){
+            this.raw=raw;this.visual=visual;this.mapped=Set.copyOf(mapped);this.selected=selected;
         }
-        private LunaElement analog(String name, float x, float y, float width, float height) {
-            LunaElement tile = new LunaElement(getInnerElement(), width, height * verticalScale); tile.getPosition().inTL(x, y * verticalScale); tile.setRenderBackground(false); tile.setRenderBorder(false);
-            tile.addText(name, INK, FOCUS, List.of()); tile.centerText(); return tile;
-        }
-        void update(InputState state) {
-            controls.forEach((control, tile) -> { boolean held = state.rawButtons.contains(control); tile.setBackgroundColor(held ? SELECTED : FIELD); tile.setBorderColor(held ? FOCUS : STEEL); });
-            leftStick.changeText(String.format(Locale.ROOT, "Raw L %+.2f %+.2f", state.rawLeftX, state.rawLeftY), List.of()); leftStick.centerText();
-            rightStick.changeText(String.format(Locale.ROOT, "Raw R %+.2f %+.2f", state.rawRightX, state.rawRightY), List.of()); rightStick.centerText();
+        @Override public void renderBelow(float alphaMult){
+            super.renderBelow(alphaMult);var p=getPosition();
+            renderer.render(p.getX(),p.getY(),p.getWidth(),p.getHeight(),visual,raw,mapped,selected,alphaMult);
         }
     }
 }

@@ -24,6 +24,9 @@ public final class RefitWorkspace {
     private boolean ships,details;
     private List<Row> rows=List.of();
     private final List<Hit> hits=new ArrayList<>();
+    private sectorpad.core.DeviceVisual deviceVisual=sectorpad.core.DeviceVisual.GENERIC;
+    private final sectorpad.ui.PromptRenderer prompts=new sectorpad.ui.PromptRenderer();
+    public void setDeviceVisual(sectorpad.core.DeviceVisual visual){deviceVisual=visual==null?sectorpad.core.DeviceVisual.GENERIC:visual;}
     private LazyFont font;
     private final List<LazyFont.DrawableString> labels=new ArrayList<>();
     private int textIndex;
@@ -150,7 +153,7 @@ public final class RefitWorkspace {
             TripadDrawing.line(x+16*s,y+64*s,x+w-16*s,y+64*s,STEEL,1);
             button("native","Native refit",x+16*s,y+18*s,155*s,32*s,KEY,s);
             button("hub","Command hub",x+181*s,y+18*s,165*s,32*s,KEY,s);
-            text(footer,x+362*s,y+44*s,15*s,CYAN,w-382*s,40*s);
+            prompts.draw(footer,x+362*s,y+44*s,15*s,CYAN,w-382*s,40*s,false,deviceVisual);
         }finally{GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPopMatrix();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPopMatrix();GL11.glMatrixMode(matrix);GL11.glPopAttrib();}
     }
     private String shortDetail(String value){return value.length()>74?value.substring(0,71)+"...":value;}

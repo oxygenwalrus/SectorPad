@@ -8,7 +8,7 @@ import java.util.Set;
 public final class SetupInputTests {
     private static int checks;
     public static void main(String[] args) {
-        neutralAndDiagnostics(); navigation(); capture(); compatibility();
+        neutralAndDiagnostics(); navigation(); capture(); compatibility(); setupGeometry();
         System.out.println("SetupInputTests: " + checks + " checks passed (headless; no game/controller claim)");
     }
     private static PadFrame frame(Set<String> buttons, float lx, float ly, float rx, float ry, float lt, float rt) {
@@ -22,6 +22,11 @@ public final class SetupInputTests {
         DeviceCalibration.Trigger trigger = new DeviceCalibration.Trigger(.2f, .6f);
         PadFrame raw = frame(Set.of(), .28f, -.21f, -.25f, .27f, .2f, .2f);
         var rest = paired(frame(Set.of(), 0, 0, 0, 0, trigger.apply(raw.lt()), trigger.apply(raw.rt())), raw);
+        check(rest.rawFrame==raw,"Diagram receives the unmodified device snapshot");
+        check(!rest.held("LEFT_STICK")&&!rest.held("RIGHT_STICK"),"Raw drift does not report an effective mapped action");
+        check(paired(frame(Set.of(),.8f,0,0,0,0,0),raw).held("LEFT_STICK"),"Effective left-stick action is reported");
+        check(paired(frame(Set.of(),0,0,0,.8f,0,0),raw).held("RIGHT_STICK"),"Effective right-stick action is reported");
+        check(!paired(frame(Set.of("A"),1,0,0,0,0,0),PadFrame.disconnected()).held("A"),"Disconnected setup cannot report a held action");
         check(rest.neutral(), "Valid trigger rest offset and centered sticks can arm setup");
         check(rest.leftTrigger == 0 && rest.rightTrigger == 0 && rest.buttons.isEmpty(), "Raw offsets cannot create calibrated trigger presses");
         check(rest.rawLeftTrigger == .2f && rest.rawRightTrigger == .2f, "Diagnostic trigger rest values remain raw");
@@ -82,6 +87,17 @@ public final class SetupInputTests {
         check(!paired(zero(), PadFrame.disconnected()).connected && !paired(PadFrame.disconnected(), zero()).connected, "Either disconnected frame disables setup input");
         check(!LunaRemappingPanel.InputState.fromFrames(zero(), zero(), false).focused, "Factory preserves physical focus state");
         check(!LunaRemappingPanel.InputState.disconnected().connected, "Disconnected compatibility factory remains available");
+    }
+    private static void setupGeometry(){
+        for(float screenHeight:new float[]{480,720,800,1080}){
+            float height=Math.min(screenHeight-40,760)-20;
+            var layout=LunaRemappingPanel.setupLayout(height);
+            check(layout.pageSize()>=1,"At least one binding is visible");
+            check(layout.listTop()+layout.pageSize()*29<=layout.footer(),"Binding rows do not overlap footer at "+screenHeight);
+            check(62+layout.diagramHeight()<layout.listTop(),"Diagram does not overlap bindings");
+            check(layout.footer()+63<=height,"Both footer rows remain inside setup");
+        }
+        check(LunaRemappingPanel.setupLayout(420).compact(),"Scaled 480-high screen uses compact information bands");
     }
     private static void check(boolean condition, String message) { checks++; if (!condition) throw new AssertionError(message); }
 }

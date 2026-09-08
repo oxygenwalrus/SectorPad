@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.3.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. Earlier tests detected a connected XInput controller in both the standalone probe and isolated game on its first input frame. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.4.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. Earlier tests detected a connected XInput controller in both the standalone probe and isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -70,6 +70,14 @@ The native frame skin and SectorPad-owned interfaces now share deeper navy reces
 All 57 allowlisted native textures retain their original dimensions, transparency gutters and repeatable seams. A generated specimen sheet was inspected. The new offscreen harness renders the current OverlayRenderer and RefitWorkspace through a real LWJGL OpenGL context with LazyFont and read-only installed font/sprite resources. Its fixture data is synthetic. Checks cover actual keyboard/radial hit correspondence, refit target bounds, GL errors and restoration of matrix, texture, blend and other drawing state at 1280×720, 1280×800 and 1920×1080, with scale 1.0 and 1.8. Shared control surfaces also have a visual specimen for hover, selection and opacity. These artifacts are not screenshots from a live game or a full LunaLib integration test. See [design and preview evidence](UI_REFINEMENT.md).
 
 The full build and existing behavior suites pass. The 32 protected original installation/dependency hashes remain unchanged. This turn launched no game window and modified no installed base-game content. Live integration of the refined theme, mixed-mod palette loading, native Luna mounting, handheld readability and physical touch/controller input remain device acceptance work.
+
+## 1.4.0 device-aware visuals
+
+New production vector drawing supplies Xbox, Steam Deck, ROG Ally and generic controller outlines plus inline face, shoulder, trigger, stick, D-pad, View and Menu glyphs. Device names select the automatic appearance conservatively; Steam Virtual Gamepad and XInput alone cannot establish physical hardware identity. LunaLib's Device appearance provides a saved override without changing input selection or mappings.
+
+Setup's diagnostic diagram reads raw frames, including simultaneous triggers and stick deflection. Its mapped/selected highlights follow the displayed draft or active preview. Inline prompts follow the effective profile and change appearance when the current device or Luna preference changes. Explicit generated tokens are used only on prompt surfaces; ordinary profile names, wheel names and typed text keep the plain-text rendering path.
+
+Headless checks cover identity fallbacks, raw/effective separation, token parsing and device control geometry. The offscreen harness additionally renders all four device families, mapped/selected states, disconnect clearing and remapped prompt wrapping at 720p/800p, and checks component OpenGL restoration. These are synthetic input frames with actual production drawing and installed fonts. Native Luna panel mounting, physical glyph readability and hardware reactions remain unverified in a new game session. No installed base-game files are modified.
 
 ## Input ownership
 

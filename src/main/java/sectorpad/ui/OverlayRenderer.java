@@ -11,6 +11,11 @@ import static sectorpad.ui.TripadTheme.*;
 
 /** Draws SectorPad-owned overlays and restores the caller's GL state. */
 public final class OverlayRenderer {
+    private sectorpad.core.DeviceVisual deviceVisual=sectorpad.core.DeviceVisual.GENERIC;
+    private final PromptRenderer prompts=new PromptRenderer();
+    private boolean bannerPrompts;
+    public void setBannerPrompts(boolean enabled){bannerPrompts=enabled;}
+    public void setDeviceVisual(sectorpad.core.DeviceVisual visual){deviceVisual=visual==null?sectorpad.core.DeviceVisual.GENERIC:visual;}
     private LazyFont smallFont,largeFont;
     private final List<LazyFont.DrawableString> smallLabels=new ArrayList<>(),largeLabels=new ArrayList<>();
     private int smallIndex,largeIndex;
@@ -184,7 +189,7 @@ public final class OverlayRenderer {
         text(description,cx,wheelLayout.descriptionY(),17*s,INK,Math.min(width-48,770*s),41*s,true);
         float footW=Math.min(width-40*s,920*s);
         TripadDrawing.plate(cx-footW/2,wheelLayout.footerY()-34*s,footW,47*s,8*s,PANEL,alpha(STEEL,140));
-        text(footer,cx,wheelLayout.footerY(),16*s,MUTED,footW-28*s,35*s,true);
+        promptText(footer,cx,wheelLayout.footerY(),16*s,MUTED,footW-28*s,35*s,true);
     }
     private void drawKeyboard(float width,float height,float scale,TextEntryModel keyboard,String footer){
         String[] rows=keyboard.rows();keyboardLayout=OverlayLayout.keyboard(width,height,scale,rows,keyboard.docked());
@@ -210,7 +215,7 @@ public final class OverlayRenderer {
                 text(label,r.x()+r.width()/2,r.y()+(r.height()+size)/2,size,ink,r.width()-10*s,size*1.4f,true);
             }
         }
-        text(footer,p.x()+p.width()/2,keyboardLayout.footerY(),16*s,CYAN,p.width()-44*s,36*s,true);
+        promptText(footer,p.x()+p.width()/2,keyboardLayout.footerY(),16*s,CYAN,p.width()-44*s,36*s,true);
     }
     private void drawDialog(float width,float height,float scale,String title,String body,String footer){
         float baseHeight=body==null?300:Math.min(540,300+Math.max(0,body.length()-230)/70*22);
@@ -218,12 +223,17 @@ public final class OverlayRenderer {
         rect(0,0,width,height,alpha(DIM,174));panelFrame(p.x(),p.y(),p.width(),p.height(),s);
         text(title,p.x()+28*s,p.top()-27*s,26*s,INK,p.width()-56*s,61*s,false);
         text(body,p.x()+28*s,p.top()-100*s,20*s,MUTED,p.width()-56*s,p.height()-172*s,false);
-        text(footer,p.x()+28*s,p.y()+50*s,17*s,CYAN,p.width()-56*s,40*s,false);
+        promptText(footer,p.x()+28*s,p.y()+50*s,17*s,CYAN,p.width()-56*s,40*s,false);
+    }
+    private void promptText(String text,float x,float top,float size,Color ink,float width,float height,boolean centered){
+        prompts.draw(text,x,top,size,ink,width,height,centered,deviceVisual);
     }
     private void drawStatus(float width,float height,float scale,String banner,String footer){
         float s=Math.max(.1f,Math.min(scale,Math.min((width-32)/710f,(height-32)/100f)));
         float w=Math.min(width-32,710*s),h=94*s,x=width-w-16,y=14;panelFrame(x,y,w,h,s);
-        text(banner,x+14*s,y+h-12*s,18*s,INK,w-28*s,40*s,false);text(footer,x+14*s,y+38*s,16*s,MUTED,w-28*s,35*s,false);
+        if(bannerPrompts)promptText(banner,x+14*s,y+h-12*s,18*s,INK,w-28*s,40*s,false);
+        else text(banner,x+14*s,y+h-12*s,18*s,INK,w-28*s,40*s,false);
+        promptText(footer,x+14*s,y+38*s,16*s,MUTED,w-28*s,35*s,false);
     }
     private void drawDiagnostics(float width,float height,float scale,List<String> diagnostics){
         float s=Math.max(.1f,Math.min(scale,Math.min((width-32)/640f,(height-32)/(diagnostics.size()*23+32))));

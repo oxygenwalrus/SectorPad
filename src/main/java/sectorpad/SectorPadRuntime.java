@@ -769,6 +769,8 @@ public final class SectorPadRuntime implements AutoCloseable {
     public void render(){
         if(!initialized||closed||!Display.isCreated()||!Display.isActive())return;
         ControllerSettings prefs=settings.settings();
+        DeviceVisual visual=DeviceVisual.resolve(prefs.glyphStyle,raw.deviceName());
+        renderer.setDeviceVisual(visual);refitWorkspace.setDeviceVisual(visual);
         if(refitSession.visible()){
             try {refitWorkspace.render(Global.getSettings().getScreenWidth(),Global.getSettings().getScreenHeight(),prefs.uiScale,
                 prompt("REFIT","ui.confirm")+" Select  "+prompt("REFIT","ui.cancel")+" Back  "+prompt("REFIT","ui.previousTab")+"/"+prompt("REFIT","ui.nextTab")+" Sections  "+prompt("REFIT","ui.tooltip")+" Details");}
@@ -781,22 +783,25 @@ public final class SectorPadRuntime implements AutoCloseable {
         String dialogBody=confirmation!=null?confirmation.description():quantities.isActive()?quantities.status():"";
         String footer=prompt("UI","ui.confirm")+" Confirm   "+prompt("UI","ui.cancel")+" Cancel   "+prompt("UI","ui.nextTab")+" Next page";
         if(keyboard.isOpen())footer=prompt("UI","ui.confirm")+" Type   "+prompt("UI","ui.secondary")+" Erase   "+prompt("UI","ui.actions")+" Shift   "+prompt("UI","ui.previousTab")+"/"+prompt("UI","ui.nextTab")+" Caret   "+prompt("UI","game.menu")+" Apply   "+prompt("UI","ui.cancel")+" Cancel";
-        if(!hasModal())footer=mainMenuShortcutsAvailable()?"X Setup   Y Mod settings   R3 Keyboard   "+prompt("UI","hub.open")+" Hub":prompt(context.name(),"hub.open")+" Command hub   View + Menu (hold) Recovery";
-        if(requireReconnectAck&&raw.connected())footer="Release controls, then A to reconnect. Keyboard and mouse remain available.";
-        if(settings.isPreviewing()&&remapPanel==null)footer="Preview: "+(int)Math.ceil(settings.previewSecondsRemaining())+"s   Menu Keep   View Revert";
+        if(!hasModal())footer=mainMenuShortcutsAvailable()?"{pad:X} Setup   {pad:Y} Mod settings   {pad:R3} Keyboard   "+prompt("UI","hub.open")+" Hub":prompt(context.name(),"hub.open")+" Command hub   {pad:VIEW} + {pad:MENU} (hold) Recovery";
+        if(requireReconnectAck&&raw.connected())footer="Release controls, then {pad:A} to reconnect. Keyboard and mouse remain available.";
+        if(settings.isPreviewing()&&remapPanel==null)footer="Preview: "+(int)Math.ceil(settings.previewSecondsRemaining())+"s   {pad:MENU} Keep   {pad:VIEW} Revert";
         if(remapPanel!=null)footer="Controller Setup owns input · Changes require confirmation";
         if(console.isOpen()&&!hasModal())footer=prompt("UI","ui.secondary")+" Keyboard   "+prompt("UI","ui.actions")+" Complete   "+prompt("UI","ui.confirm")+" Run command   "+prompt("UI","ui.cancel")+" Close";
         if(quantities.isActive())footer=prompt("UI","ui.cancel")+" / Escape Cancel";
+        boolean bannerPrompts=false;
         String banner=raw.connected()?context.label()+" · "+(campaignPointer?"Pointer":precision?"Precision":multiSelect?"Multi-select":"Controller"):
             backend.status().startsWith("Controller backend unavailable")?"Controller input unavailable. See starsector.log for details.":"Waiting for gamepad · F10 Setup > Reconnect controller";
         if(recoveryOverride)banner="Recovery controls active · Enable SectorPad in Mod settings";
         if(context.is("CAMPAIGN")&&raw.connected()&&!hasModal()){
+            bannerPrompts=true;
             banner=context.paused()?"Campaign paused · "+prompt("CAMPAIGN","campaign.pause")+" Resume · Left stick moves pointer"
                 :campaignPointer?"Campaign pointer mode · "+prompt("CAMPAIGN","campaign.pointerMode")+" Fleet controls"
                 :"Campaign travel · Left stick moves fleet · "+prompt("CAMPAIGN","campaign.pause")+" Pause";
         }
         if(context.is("COMBAT")&&raw.connected())banner+=" · "+(game.isAutopilotOn()?"Autopilot":game.isPrecisionTargeting()?"Precision target":game.isTargetLocked()?"Target locked":"Manual aim");
-        if(System.nanoTime()-lastStatus<5_000_000_000L)banner=status;
+        if(System.nanoTime()-lastStatus<5_000_000_000L){banner=status;bannerPrompts=false;}
+        renderer.setBannerPrompts(bannerPrompts);
         List<String> diagnostics=prefs.diagnosticsEnabled?List.of("SECTORPAD / "+backend.status(),"Context: "+context.name()+" / "+context.label(),
             "Profile: "+settings.activeProfile().displayName,"L "+format(raw.lx())+", "+format(raw.ly())+"   R "+format(raw.rx())+", "+format(raw.ry()),
             "LT "+format(raw.lt())+"   RT "+format(raw.rt())+"   Independent axes: "+raw.independentTriggers(),
@@ -822,7 +827,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         boolean hints=prefs.hintsEnabled&&remapPanel==null&&!nativeSettingsOpen()&&(raw.connected()||recentStatus||Global.getCurrentState()==com.fs.starfarer.api.GameState.TITLE)&&(!console.isOpen()||console.controllerLayout());
         renderer.render(Display.getWidth()/scale,Display.getHeight()/scale,prefs.uiScale,wheel,keyboard,hints?banner:null,footer,dialogTitle,dialogBody,diagnostics,aim);
     }
-    private String prompt(String context,String action){return ButtonLabels.label(settings.activeProfile().binding(context,action),settings.settings().glyphStyle,raw.deviceName());}
+    private String prompt(String context,String action){return sectorpad.ui.PromptRenderer.token(settings.activeProfile().binding(context,action));}
     private static String format(float value){return String.format(Locale.ROOT,"%.2f",value);}
     private boolean mainMenuShortcutsAvailable(){
         if(hasModal()||requireReconnectAck||!Display.isActive()||nativeSettingsOpen()||console.isOpen())return false;

@@ -56,7 +56,7 @@ public final class ControllerSettings {
         hubKeycode = integer(values, "sp_hub_key", 66, 0, 255);
         remapKeycode = integer(values, "sp_remap_key", 68, 0, 255);
         keyboardKeycode = integer(values, "sp_keyboard_key", 67, 0, 255);
-        glyphStyle = choice(values, "sp_glyphs", "Automatic", List.of("Automatic", "Xbox", "Steam Deck", "Generic"));
+        glyphStyle = choice(values, "sp_glyphs", "Automatic", List.of("Automatic", "Xbox", "Steam Deck", "ROG Ally", "Generic"));
         String profile = values.stringValue("sp_profile");
         profileId = profile != null && profile.matches("[a-z0-9][a-z0-9_-]{0,47}") ? profile : "default";
         pointerSpeed = number(values, "sp_pointer_speed", 900f, 100f, 3000f);
