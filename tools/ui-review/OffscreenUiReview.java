@@ -21,8 +21,10 @@ import sectorpad.ui.TripadTheme;
 import sectorpad.ui.ControlGlyphs;
 import sectorpad.ui.DeviceDiagram;
 import sectorpad.ui.PromptRenderer;
+import sectorpad.ui.UiArtwork;
 
 import javax.imageio.ImageIO;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
@@ -39,14 +41,17 @@ import java.util.Set;
 /** Test-only resource adapter. All GL geometry and text drawing is production code. */
 public final class OffscreenUiReview {
     private static int assertions;
-    private static Path core, output;
+    private static Path core, output, mod;
     private static final Map<String, SpriteAPI> sprites = new HashMap<>();
+    private static final Map<String, Integer> renderedTextures = new HashMap<>();
+    private static final Map<String, SpriteSnapshot> lastTextureDraw = new HashMap<>();
     private static final DeviceDiagram deviceDiagram=new DeviceDiagram();
     private static final PromptRenderer prompts=new PromptRenderer();
 
     public static void main(String[] args) throws Exception {
         org.apache.log4j.Logger.getRootLogger().addAppender(new org.apache.log4j.varia.NullAppender());
-        core=Path.of(args[0]).toAbsolutePath().normalize();output=Path.of(args[1]);Files.createDirectories(output);
+        core=Path.of(args[0]).toAbsolutePath().normalize();output=Path.of(args[1]).toAbsolutePath().normalize();Files.createDirectories(output);
+        mod=output.getParent().getParent().resolve("mod").normalize();
         if((Pbuffer.getCapabilities()&Pbuffer.PBUFFER_SUPPORTED)==0)throw new IllegalStateException("Offscreen Pbuffer unavailable; no visible fallback is permitted");
         Pbuffer pbuffer=new Pbuffer(1920,1080,new PixelFormat(8,24,8),null,null);
         try {
@@ -69,14 +74,25 @@ public final class OffscreenUiReview {
             capture("devices-bindings",1280,720,1,()->orthographic(1280,720,()->deviceSamples(720,false,false)));
             capture("devices-disconnected",1280,720,1,()->orthographic(1280,720,()->deviceSamples(720,false,true)));
             for(int height:new int[]{720,800})capture("device-glyphs-prompts",1280,height,1,()->orthographic(1280,height,()->glyphSamples(height)));
+            artworkChecks();
             String report="OffscreenUiReview: "+assertions+" assertions passed\nRenderer: "+GL11.glGetString(GL11.GL_RENDERER)
                 +"\nActual production OverlayRenderer/RefitWorkspace/DeviceDiagram/ControlGlyphs/PromptRenderer and LazyFont, local installed insignia fonts.\n"
                 +"Synthetic fixture data and neutral background; no native game UI, input, mod compatibility, or physical-device validation.\n"
-                +"Resource adapter implements only read-only local streams and OpenGL sprite upload. Game installation untouched.\n";
+                +"Resource adapter reads installed fonts and one ship sprite, plus mod-local sourced controller artwork; honors tint, alpha, rotation, blend and checks sprite-state restoration. Game installation untouched.\n"
+                +"Sourced texture render counts: "+new java.util.TreeMap<>(renderedTextures.entrySet().stream().filter(e->e.getKey().startsWith("graphics/sectorpad/controls/")).collect(java.util.stream.Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)))+"\n";
             Files.writeString(output.resolve("EVIDENCE.txt"),report);System.out.print(report);
         } finally {Global.setSettings(null);pbuffer.destroy();}
     }
-    private static Path resource(String name){Path p=core.resolve(name).normalize();if(!p.startsWith(core))throw new IllegalArgumentException("Resource escapes installation");return p;}
+    private static Path resource(String name){
+        Path root=name.startsWith("graphics/sectorpad/controls/")?mod:core;
+        Path p=root.resolve(name).normalize();
+        if(!p.startsWith(root))throw new IllegalArgumentException("Resource escapes allowed root");
+        if(root.equals(mod)&&!p.startsWith(mod.resolve("graphics/sectorpad/controls")))
+            throw new IllegalArgumentException("Artwork escapes mod-local controls directory");
+        if(root.equals(core)&&!(name.startsWith("graphics/fonts/")||name.equals("graphics/ships/eagle/eagle_base.png")))
+            throw new IllegalArgumentException("Unexpected installation resource: "+name);
+        return p;
+    }
     private static SpriteAPI sprite(String name) throws Exception {
         SpriteAPI cached=sprites.get(name);if(cached!=null)return cached;
         BufferedImage image=ImageIO.read(resource(name).toFile());if(image==null)throw new IllegalArgumentException("Unreadable texture: "+name);
@@ -86,13 +102,30 @@ public final class OffscreenUiReview {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D,texture);GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_LINEAR);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,width,height,0,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);GL11.glBindTexture(GL11.GL_TEXTURE_2D,previous);
-        float[] state={width,height,0,1};
+        float[] state={width,height,0,1};Color[] color={Color.WHITE};
+        int[] blend={GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA};
         SpriteAPI value=(SpriteAPI)Proxy.newProxyInstance(SpriteAPI.class.getClassLoader(),new Class<?>[]{SpriteAPI.class},(proxy,method,a)->switch(method.getName()){
             case "getTextureId" -> texture;case "getWidth" -> state[0];case "getHeight" -> state[1];case "getAngle" -> state[2];case "getAlphaMult" -> state[3];
+            case "getColor" -> color[0];case "setColor" -> {color[0]=(Color)a[0];yield null;}
+            case "getBlendSrc" -> blend[0];case "getBlendDest" -> blend[1];
+            case "setNormalBlend" -> {blend[0]=GL11.GL_SRC_ALPHA;blend[1]=GL11.GL_ONE_MINUS_SRC_ALPHA;yield null;}
+            case "setBlendFunc" -> {blend[0]=(int)a[0];blend[1]=(int)a[1];yield null;}
             case "setSize" -> {state[0]=(float)a[0];state[1]=(float)a[1];yield null;}
             case "setAngle" -> {state[2]=(float)a[0];yield null;}case "setAlphaMult" -> {state[3]=(float)a[0];yield null;}
-            case "renderAtCenter" -> {float cx=(float)a[0],cy=(float)a[1],w=state[0]/2,h=state[1]/2;GL11.glEnable(GL11.GL_TEXTURE_2D);GL11.glBindTexture(GL11.GL_TEXTURE_2D,texture);GL11.glColor4f(1,1,1,state[3]);GL11.glBegin(GL11.GL_QUADS);
-                GL11.glTexCoord2f(0,0);GL11.glVertex2f(cx-w,cy-h);GL11.glTexCoord2f(1,0);GL11.glVertex2f(cx+w,cy-h);GL11.glTexCoord2f(1,1);GL11.glVertex2f(cx+w,cy+h);GL11.glTexCoord2f(0,1);GL11.glVertex2f(cx-w,cy+h);GL11.glEnd();yield null;}
+            case "renderAtCenter" -> {
+                float cx=(float)a[0],cy=(float)a[1],w=state[0]/2,h=state[1]/2;
+                double angle=Math.toRadians(state[2]);float cos=(float)Math.cos(angle),sin=(float)Math.sin(angle);
+                GL11.glEnable(GL11.GL_TEXTURE_2D);GL11.glBindTexture(GL11.GL_TEXTURE_2D,texture);
+                GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(blend[0],blend[1]);
+                GL11.glColor4f(color[0].getRed()/255f,color[0].getGreen()/255f,color[0].getBlue()/255f,state[3]*color[0].getAlpha()/255f);
+                GL11.glBegin(GL11.GL_QUADS);
+                GL11.glTexCoord2f(0,0);GL11.glVertex2f(cx-w*cos+h*sin,cy-w*sin-h*cos);
+                GL11.glTexCoord2f(1,0);GL11.glVertex2f(cx+w*cos+h*sin,cy+w*sin-h*cos);
+                GL11.glTexCoord2f(1,1);GL11.glVertex2f(cx+w*cos-h*sin,cy+w*sin+h*cos);
+                GL11.glTexCoord2f(0,1);GL11.glVertex2f(cx-w*cos-h*sin,cy-w*sin+h*cos);GL11.glEnd();
+                renderedTextures.merge(name,1,Integer::sum);
+                lastTextureDraw.put(name,new SpriteSnapshot(state[0],state[1],state[2],state[3],color[0],blend[0],blend[1]));yield null;
+            }
             case "toString" -> "Read-only sprite "+name;
             default -> throw new UnsupportedOperationException("Unexpected sprite API: "+method);
         });sprites.put(name,value);return value;
@@ -151,7 +184,7 @@ public final class OffscreenUiReview {
             DeviceVisual visual=DEVICES[i];String selected=disconnected?null:i%2==0?"RT":"RIGHT_STICK";
             componentState("device "+visual,()->deviceDiagram.render(x+40,y+25,520,diagramHeight,visual,frame,mapped,selected,1));
         }
-        label("Production vector rendering · synthetic snapshots · no physical-device claim",44,28,15,TripadTheme.MUTED);
+        label("Production sourced artwork + reactive overlays · synthetic snapshots · no physical-device claim",44,28,15,TripadTheme.MUTED);
     }
     private static PadFrame samplePad(String name,boolean live){
         return new PadFrame(true,"offscreen-fixture",name,true,live?.72f:0,live?-.54f:0,live?-.65f:0,live?.8f:0,
@@ -160,7 +193,7 @@ public final class OffscreenUiReview {
     private static void glyphSamples(int height){
         label("SECTORPAD / DEVICE GLYPHS & REMAPPED PROMPTS",44,height-35,25,TripadTheme.INK);
         label("Native insignia font · controller-specific shoulders and utility icons · deliberate wrapping",44,height-67,17,TripadTheme.MUTED);
-        String[] controls={"A","B","X","Y","LB","RB","LT","RT","VIEW","MENU","L3","R3","DPAD_UP","DPAD_RIGHT","LEFT_STICK","RIGHT_STICK"};
+        String[] controls={"A","B","X","Y","LB","RB","LT","RT","VIEW","MENU","L3","R3","DPAD_UP","DPAD_RIGHT","DPAD_DOWN","DPAD_LEFT","DPAD","LEFT_STICK","RIGHT_STICK"};
         for(int i=0;i<DEVICES.length;i++){
             float top=height-104-i*((height-133)/4f),rowHeight=(height-133)/4f-12;
             TripadDrawing.frame(40,top-rowHeight,1200,rowHeight,1);
@@ -168,7 +201,7 @@ public final class OffscreenUiReview {
             for(int j=0;j<controls.length;j++){
                 float width=ControlGlyphs.width(controls[j],DEVICES[i],24);
                 check(Float.isFinite(width)&&width>0,"Glyph has finite advance: "+DEVICES[i]+" "+controls[j]);
-                String control=controls[j];DeviceVisual visual=DEVICES[i];float cx=302+j*57;boolean active=j%3==0;
+                String control=controls[j];DeviceVisual visual=DEVICES[i];float cx=302+j*48.5f;boolean active=j%3==0;
                 componentState("glyph "+control,()->ControlGlyphs.draw(control,visual,cx,top-28,24,active,1));
             }
             prompts.draw("{pad:RB} + {pad:DPAD_RIGHT} Next equipment bank  ·  {pad:LT} Hold precision aim  ·  {pad:MENU} Apply current configuration",
@@ -199,13 +232,49 @@ public final class OffscreenUiReview {
         int mode=GL11.glGetInteger(GL11.GL_MATRIX_MODE),texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         float[] projection=matrix(GL11.GL_PROJECTION_MATRIX),model=matrix(GL11.GL_MODELVIEW_MATRIX);
         boolean textured=GL11.glIsEnabled(GL11.GL_TEXTURE_2D),blended=GL11.glIsEnabled(GL11.GL_BLEND);
-        float lineWidth=GL11.glGetFloat(GL11.GL_LINE_WIDTH);render.run();
+        float lineWidth=GL11.glGetFloat(GL11.GL_LINE_WIDTH);float[] color=currentColor();
+        int blendSrc=GL11.glGetInteger(GL11.GL_BLEND_SRC),blendDst=GL11.glGetInteger(GL11.GL_BLEND_DST);
+        Map<String,SpriteSnapshot> before=new HashMap<>();sprites.forEach((path,sprite)->before.put(path,SpriteSnapshot.of(sprite)));
+        render.run();
         check(GL11.glGetError()==GL11.GL_NO_ERROR,"Direct component has no GL error: "+name);
         check(GL11.glGetInteger(GL11.GL_MATRIX_MODE)==mode&&Arrays.equals(projection,matrix(GL11.GL_PROJECTION_MATRIX))
             &&Arrays.equals(model,matrix(GL11.GL_MODELVIEW_MATRIX)),"Direct component restores matrices: "+name);
         check(texture==GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)&&textured==GL11.glIsEnabled(GL11.GL_TEXTURE_2D)
             &&blended==GL11.glIsEnabled(GL11.GL_BLEND)&&Math.abs(lineWidth-GL11.glGetFloat(GL11.GL_LINE_WIDTH))<.001f,
             "Direct component restores drawing attributes: "+name);
+        check(Arrays.equals(color,currentColor())&&blendSrc==GL11.glGetInteger(GL11.GL_BLEND_SRC)
+            &&blendDst==GL11.glGetInteger(GL11.GL_BLEND_DST),"Direct component restores color and blend factors: "+name);
+        before.forEach((path,state)->check(state.equals(SpriteSnapshot.of(sprites.get(path))),"Direct component restores cached sprite state: "+name+" "+path));
+    }
+    private record SpriteSnapshot(float width,float height,float angle,float alpha,Color color,int src,int dst){
+        private static SpriteSnapshot of(SpriteAPI sprite){return new SpriteSnapshot(sprite.getWidth(),sprite.getHeight(),sprite.getAngle(),sprite.getAlphaMult(),sprite.getColor(),sprite.getBlendSrc(),sprite.getBlendDest());}
+    }
+    private static float[] currentColor(){FloatBuffer buffer=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_CURRENT_COLOR,buffer);float[] color=new float[4];buffer.get(color);return color;}
+    private static void artworkChecks()throws Exception{
+        for(String device:List.of("xbox","steam-deck","rog-ally")){
+            String path="graphics/sectorpad/controls/devices/"+device+".png";
+            check(sprites.containsKey(path)&&renderedTextures.getOrDefault(path,0)>0,"Sourced device texture loaded and rendered, never silent fallback: "+device);
+            check(resource(path).startsWith(mod),"Device artwork is read only from the mod: "+device);
+        }
+        for(DeviceVisual visual:DeviceVisual.values())for(String control:List.of("A","B","X","Y","LB","RB","LT","RT","VIEW","MENU","L3","R3","DPAD_UP","DPAD_RIGHT","DPAD_DOWN","DPAD_LEFT","DPAD","LEFT_STICK","RIGHT_STICK")){
+            String glyph=ControlGlyphs.artworkPath(control,visual);
+            check(glyph!=null&&sprites.containsKey(glyph)&&renderedTextures.getOrDefault(glyph,0)>0,"Sourced glyph texture actually loaded and rendered: "+visual+" "+control);
+        }
+        String path="graphics/sectorpad/controls/devices/steam-deck.png";
+        SpriteAPI sprite=sprite(path);SpriteSnapshot original=SpriteSnapshot.of(sprite);
+        try{
+            sprite.setSize(123,89);sprite.setAngle(37);sprite.setAlphaMult(.42f);sprite.setColor(new Color(41,73,109,157));sprite.setBlendFunc(GL11.GL_ONE,GL11.GL_ONE);
+            SpriteSnapshot previous=SpriteSnapshot.of(sprite);Color tint=new Color(181,211,227,129);
+            orthographic(1280,720,()->componentState("sourced artwork unusual shared sprite state",()->{
+                check(UiArtwork.draw(path,640,360,390,155,tint),"Valid sourced artwork draw succeeds");
+                check(new SpriteSnapshot(390,155,0,1,tint,GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA).equals(lastTextureDraw.get(path)),"Sourced artwork applies requested size, tint and normal blend at draw time");
+            }));
+            check(previous.equals(SpriteSnapshot.of(sprite)),"Sourced artwork restores unusual dimensions, angle, alpha, tint and blend");
+        }finally{sprite.setSize(original.width(),original.height());sprite.setAngle(original.angle());sprite.setAlphaMult(original.alpha());sprite.setColor(original.color());sprite.setBlendFunc(original.src(),original.dst());}
+        componentState("missing artwork fallback",()->check(!UiArtwork.draw("graphics/sectorpad/controls/missing.png",1,1,24,24,Color.WHITE),"Missing artwork returns safe fallback"));
+        componentState("cached missing artwork fallback",()->check(!UiArtwork.draw("graphics/sectorpad/controls/missing.png",1,1,24,24,Color.WHITE),"Repeated missing artwork remains safe"));
+        for(String invalid:List.of("graphics/sectorpad/controls/../outside.png","graphics/fonts/insignia21LTaa.png","graphics/sectorpad/controls/devices/steam-deck.svg"))
+            check(!UiArtwork.draw(invalid,1,1,24,24,Color.WHITE),"Artwork loader rejects invalid path: "+invalid);
     }
     private static void controlSamples(){
         int matrix=GL11.glGetInteger(GL11.GL_MATRIX_MODE);GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);

@@ -13,7 +13,10 @@ public final class DeviceVisualTests {
             check(parts.size()==1&&control.equals(parts.get(0).control()),"Canonical token preserves exact normalized binding: "+control);
             for(DeviceVisual visual:DeviceVisual.values())for(float size:new float[]{12,18,24,48}){
                 float width=ControlGlyphs.width(control,visual,size);
-                check(Float.isFinite(width)&&width>=size&&width<=size*1.5f,"Glyph advance fits its supported family: "+control);
+                check(Float.isFinite(width)&&width>=size*.9f&&width<=size*2f,"Sourced glyph preserves its supported aspect ratio: "+control);
+                String path=ControlGlyphs.artworkPath(control,visual);
+                check(path!=null&&path.startsWith("graphics/sectorpad/controls/glyphs/")&&path.endsWith("/"+control.toLowerCase(java.util.Locale.ROOT)+".png"),
+                    "Every canonical control uses a mod-local sourced glyph without changing normalized binding: "+visual+" "+control);
             }
         }
         for(String text:List.of("A X Y B L1 RT Menu View", "ISS Xbox A-class", "{pad:UNKNOWN}","{pad:a}","{pad:A", "{keyboard:A}","   A\tB  ")){
@@ -34,6 +37,8 @@ public final class DeviceVisualTests {
         for(float invalid:new float[]{0,-1,Float.NaN,Float.POSITIVE_INFINITY})
             check(ControlGlyphs.width("A",DeviceVisual.XBOX,invalid)==0,"Invalid glyph dimensions have zero advance");
         check(ControlGlyphs.width("UNKNOWN",DeviceVisual.XBOX,24)==0,"Unknown controls reserve no invisible glyph space");
+        check(ControlGlyphs.artworkPath("UNKNOWN",DeviceVisual.XBOX)==null&&ControlGlyphs.artworkPath(null,DeviceVisual.XBOX)==null,
+            "Unknown controls do not construct texture paths");
         for(DeviceVisual visual:DeviceVisual.values()){
             var centers=DeviceDiagram.controlCenters(visual);
             check(centers.size()==18,"Every supported physical control has a center: "+visual);

@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.4.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. Earlier tests detected a connected XInput controller in both the standalone probe and isolated game on its first input frame. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.5.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. Earlier tests detected a connected XInput controller in both the standalone probe and isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -78,6 +78,12 @@ New production vector drawing supplies Xbox, Steam Deck, ROG Ally and generic co
 Setup's diagnostic diagram reads raw frames, including simultaneous triggers and stick deflection. Its mapped/selected highlights follow the displayed draft or active preview. Inline prompts follow the effective profile and change appearance when the current device or Luna preference changes. Explicit generated tokens are used only on prompt surfaces; ordinary profile names, wheel names and typed text keep the plain-text rendering path.
 
 Headless checks cover identity fallbacks, raw/effective separation, token parsing and device control geometry. The offscreen harness additionally renders all four device families, mapped/selected states, disconnect clearing and remapped prompt wrapping at 720p/800p, and checks component OpenGL restoration. These are synthetic input frames with actual production drawing and installed fonts. Native Luna panel mounting, physical glyph readability and hardware reactions remain unverified in a new game session. No installed base-game files are modified.
+
+## 1.5.0 sourced controller artwork
+
+Device-specific backgrounds and glyphs now use the credited Valve, Zacksly, victor-borges and Kenney assets. Standard gamepad highlights are aligned to those illustrations. Mod textures load through the public SettingsAPI and preserve the shared sprite properties and OpenGL state. Failed loads retain vector fallback and a bounded diagnostic. The build verifies committed source/output hashes and packages the required licenses.
+
+Offscreen checks require actual mod textures to load and render, test missing-texture fallback, and exercise device, mapping, disconnect and inline-prompt specimens. All samples use synthetic inputs; physical hardware acceptance and native Luna panel composition remain separate. Installed base-game files are unchanged. [Artwork sources and adaptation](CONTROLLER_ART.md).
 
 ## Input ownership
 

@@ -9,19 +9,20 @@ import sectorpad.core.DeviceVisual;
 import sectorpad.core.PadFrame;
 import static sectorpad.ui.TripadTheme.*;
 
-/** Original device silhouettes. Only controls present in the input snapshot report activity. */
+/** Licensed device illustrations with input overlays; original generic art is the safe fallback. */
 public final class DeviceDiagram {
     public static final float LOGICAL_WIDTH=520, LOGICAL_HEIGHT=200;
     public record Point(float x,float y) { }
     private static final Map<String,Point> GAMEPAD=layout(false,false);
-    private static final Map<String,Point> DECK=layout(true,true);
-    private static final Map<String,Point> ALLY=layout(true,false);
+    private static final Map<String,Point> DECK=sourceLayout(DeviceVisual.STEAM_DECK);
+    private static final Map<String,Point> ALLY=sourceLayout(DeviceVisual.ROG_ALLY);
+    private static final Map<String,Point> XBOX=sourceLayout(DeviceVisual.XBOX);
     private float opacity;
     private boolean connected;
 
     /** Logical centers, shared by schema highlighting and geometry acceptance checks. */
     public static Map<String,Point> controlCenters(DeviceVisual visual) {
-        return visual==DeviceVisual.STEAM_DECK?DECK:visual==DeviceVisual.ROG_ALLY?ALLY:GAMEPAD;
+        return visual==DeviceVisual.STEAM_DECK?DECK:visual==DeviceVisual.ROG_ALLY?ALLY:visual==DeviceVisual.XBOX?XBOX:GAMEPAD;
     }
 
     /** Draws inside the supplied bottom-left-origin bounds without changing the caller's projection. */
@@ -42,9 +43,10 @@ public final class DeviceDiagram {
             GL11.glScalef(scale,scale,1);
             GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
+            if(sourced(visual,raw,mappedControls,selectedControl))return;
             if(visual==DeviceVisual.STEAM_DECK||visual==DeviceVisual.ROG_ALLY)handheld(visual);
             else gamepad(visual);
-            Map<String,Point> points=controlCenters(visual);
+            Map<String,Point> points=visual==DeviceVisual.STEAM_DECK?layout(true,true):visual==DeviceVisual.ROG_ALLY?layout(true,false):GAMEPAD;
             dpadBody(points);
             for(String control:new String[]{"LT","RT","LB","RB","VIEW","MENU","A","B","X","Y",
                     "DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"}) {
@@ -70,6 +72,85 @@ public final class DeviceDiagram {
             GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPopMatrix();
             GL11.glMatrixMode(matrix);GL11.glPopAttrib();
         }
+    }
+
+    private boolean sourced(DeviceVisual visual,PadFrame raw,Set<String> mapped,String selected) {
+        String name=switch(visual){case STEAM_DECK->"steam-deck";case ROG_ALLY->"rog-ally";case XBOX->"xbox";default->null;};
+        if(name==null)return false;
+        float width=switch(visual){case STEAM_DECK->166f*1024/414;case ROG_ALLY->166f*66.521f/27.675f;default->166f*1729/1202;};
+        if(!UiArtwork.draw("graphics/sectorpad/controls/devices/"+name+".png",260,87,width,166,ink(INK,connected?210:100)))return false;
+        Map<String,Point> points=controlCenters(visual);
+        // Front views cannot show rear-facing triggers: labeled callouts stay above the shell.
+        for(String control:new String[]{"LT","LB","RB","RT"}) {
+            Point p=points.get(control);boolean trigger=control.endsWith("T");
+            float value=trigger&&connected?unit(control.equals("LT")?raw.lt():raw.rt()):0;
+            boolean active=connected&&(raw.down(control)||value>.15f);
+            float anchor=260+(control.startsWith("L")?-1:1)*(width*.39f);
+            TripadDrawing.line(p.x,p.y-12,anchor,169,ink(STEEL,110),1);
+            shoulderHalo(p,references(selected,control),mapped.contains(control),active);
+            ControlGlyphs.draw(control,visual,p.x,p.y,18,active,opacity*(connected?1:.5f));
+            if(trigger){TripadDrawing.rect(p.x-17,p.y+12,34,2,ink(STEEL,120));
+                if(value>0)TripadDrawing.rect(p.x-17,p.y+12,34*value,2,ink(CYAN,240));}
+        }
+        for(String control:new String[]{"VIEW","MENU","A","B","X","Y","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"}) {
+            Point p=points.get(control);boolean active=connected&&raw.down(control);
+            float radius=control.startsWith("DPAD_")?3.5f:control.equals("VIEW")||control.equals("MENU")?4:5.5f;
+            sourceHalo(p,radius,references(selected,control),mapped.contains(control),active);
+        }
+        sourceStick(points.get("LEFT_STICK"),"LEFT_STICK","L3",raw.lx(),raw.ly(),raw,mapped,selected);
+        sourceStick(points.get("RIGHT_STICK"),"RIGHT_STICK","R3",raw.rx(),raw.ry(),raw,mapped,selected);
+        return true;
+    }
+
+    private void sourceHalo(Point p,float radius,boolean selected,boolean mapped,boolean active) {
+        if(mapped)TripadDrawing.orbit(p.x,p.y,radius+1.5f,ink(connected?CYAN:MUTED,connected?130:55),1);
+        if(active){disc(p.x,p.y,radius,ink(CYAN,100));TripadDrawing.orbit(p.x,p.y,radius+1,ink(CYAN,245),1.5f);}
+        if(selected)TripadDrawing.orbit(p.x,p.y,radius+3,ink(FOCUS,245),1.5f);
+    }
+
+    private void sourceStick(Point p,String axis,String click,float dx,float dy,PadFrame raw,Set<String> mapped,String selected) {
+        dx=connected?signed(dx):0;dy=connected?signed(dy):0;
+        float magnitude=(float)Math.hypot(dx,dy);if(magnitude>1){dx/=magnitude;dy/=magnitude;}
+        boolean pressed=connected&&raw.down(click),moving=magnitude>.12f;
+        sourceHalo(p,11,references(selected,axis)||references(selected,click),mapped.contains(axis)||mapped.contains(click),pressed);
+        if(moving||pressed){float kx=p.x+dx*9,ky=p.y+dy*9;
+            TripadDrawing.line(p.x,p.y,kx,ky,ink(CYAN,235),1.5f);
+            disc(kx,ky,3.5f,ink(pressed?FOCUS:CYAN,245));}
+    }
+
+    /** Centers measured in each preserved front SVG; top callouts are deliberately separate. */
+    private static Map<String,Point> sourceLayout(DeviceVisual visual) {
+        Map<String,Point> p=new LinkedHashMap<>();
+        if(visual==DeviceVisual.STEAM_DECK) {
+            putSource(p,"LEFT_STICK",163.67f,90,1024,414);putSource(p,"RIGHT_STICK",859.5f,90,1024,414);
+            putSource(p,"A",958.5f,103.5f,1024,414);putSource(p,"B",988.5f,74,1024,414);
+            putSource(p,"X",929,74,1024,414);putSource(p,"Y",958.5f,44.5f,1024,414);
+            putSource(p,"VIEW",121.8f,33.5f,1024,414);putSource(p,"MENU",901.3f,33.5f,1024,414);
+            sourceDpad(p,67,74,17,1024,414);
+        }else if(visual==DeviceVisual.ROG_ALLY){
+            putSource(p,"LEFT_STICK",5.71f,6.13f,66.521f,27.675f);putSource(p,"RIGHT_STICK",57.32f,12.29f,66.521f,27.675f);
+            putSource(p,"A",60.49f,8.02f,66.521f,27.675f);putSource(p,"B",62.85f,5.62f,66.521f,27.675f);
+            putSource(p,"X",58.1f,5.62f,66.521f,27.675f);putSource(p,"Y",60.49f,3.24f,66.521f,27.675f);
+            putSource(p,"VIEW",12.64f,5.09f,66.521f,27.675f);putSource(p,"MENU",53.88f,5.09f,66.521f,27.675f);
+            sourceDpad(p,9.61f,11.46f,1.64f,66.521f,27.675f);
+        }else{
+            // Zacksly original has presentation margins; coordinates use its documented crop.
+            putXbox(p,"LEFT_STICK",1602,816);putXbox(p,"RIGHT_STICK",2276,1072);
+            putXbox(p,"A",2489,921);putXbox(p,"B",2606,808);putXbox(p,"X",2374,808);putXbox(p,"Y",2489,693);
+            putXbox(p,"VIEW",1920,808);putXbox(p,"MENU",2172,808);
+            sourceDpad(p,1816-1184,1088-479,63,1729,1202);
+        }
+        p.put("L3",p.get("LEFT_STICK"));p.put("R3",p.get("RIGHT_STICK"));
+        p.put("LT",new Point(135,184));p.put("LB",new Point(197,184));p.put("RB",new Point(323,184));p.put("RT",new Point(385,184));
+        return Map.copyOf(p);
+    }
+    private static void putXbox(Map<String,Point> p,String control,float x,float y){putSource(p,control,x-1184,y-479,1729,1202);}
+    private static void putSource(Map<String,Point> p,String control,float x,float y,float width,float height){
+        float scale=166/height;p.put(control,new Point(260+(x-width/2)*scale,170-y*scale));
+    }
+    private static void sourceDpad(Map<String,Point> p,float x,float y,float offset,float width,float height){
+        putSource(p,"DPAD_UP",x,y-offset,width,height);putSource(p,"DPAD_DOWN",x,y+offset,width,height);
+        putSource(p,"DPAD_LEFT",x-offset,y,width,height);putSource(p,"DPAD_RIGHT",x+offset,y,width,height);
     }
 
     private void handheld(DeviceVisual visual) {

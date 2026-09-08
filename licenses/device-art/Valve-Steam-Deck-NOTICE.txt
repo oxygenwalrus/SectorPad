@@ -1,0 +1,15 @@
+Steam Deck SVG Line Art
+Copyright Valve Corporation. Steam and Steam Deck are Valve trademarks.
+
+Source: https://partner.steamgames.com/doc/steamhardware/steamdeck/svg
+Download: https://shared.fastly.steamstatic.com/community_assets/images/steamworks_docs/english/steamdeckSVG.zip
+Retrieved: 2026-09-08
+
+Valve supplies these front, top and back SVG views specifically for adding
+Steam Deck input callouts in games. SectorPad uses the front illustration for
+its in-game controller mapping and live input display under that permission.
+This is not a CC0/MIT relicensing or an assertion of Valve endorsement.
+
+Adaptations: front SVG rendered to an antialiased transparent PNG with white
+ink for runtime tinting. Mod code draws live-input and mapping highlights as
+separate overlays. Original SVG geometry is retained.

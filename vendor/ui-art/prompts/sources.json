@@ -1,0 +1,712 @@
+{
+  "archives": [
+    {
+      "name": "zacksly-xbox-series.zip",
+      "sha256": "41420bae33bbf08732a8e22d59d56dd3294cfb99fbb59af5630bf58cf69ddabe"
+    },
+    {
+      "name": "kenney-input-prompts-1.5.zip",
+      "sha256": "ac2fcf599080b0f3ba2d174c9474db6df1a0e96ff0662580e2da79a122ab78a1"
+    }
+  ],
+  "sources": [
+    {
+      "author": "Zacksly",
+      "title": "Xbox Series Button Icons and Controls",
+      "url": "https://zacksly.itch.io/xbox-series-button-icons-and-controls",
+      "license": "CC BY 3.0"
+    },
+    {
+      "author": "Kenney",
+      "title": "Input Prompts 1.5A",
+      "url": "https://kenney.nl/assets/input-prompts",
+      "license": "CC0"
+    }
+  ],
+  "glyphs": [
+    {
+      "family": "xbox",
+      "control": "A",
+      "author": "Zacksly",
+      "source": "zacksly/A.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/A.png",
+      "sourceSha256": "806c4df3288dce2cb6ecfa1e2e0d399687a10cb7d2af47ce83d29c9fb868b092",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/a.png"
+    },
+    {
+      "family": "xbox",
+      "control": "B",
+      "author": "Zacksly",
+      "source": "zacksly/B.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/B.png",
+      "sourceSha256": "ee70a52d0b1538de80c9ba9e5615bc2d6419256ed52fb4bb7f9e2376837a1095",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/b.png"
+    },
+    {
+      "family": "xbox",
+      "control": "X",
+      "author": "Zacksly",
+      "source": "zacksly/X.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/X.png",
+      "sourceSha256": "97bdeb4ee9bd841255d2771af4b85f86a90b4985ca6f71199ef7a45fbfaa5a48",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/x.png"
+    },
+    {
+      "family": "xbox",
+      "control": "Y",
+      "author": "Zacksly",
+      "source": "zacksly/Y.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Y.png",
+      "sourceSha256": "9d98444b1dd8f89944a56369691d9ca888408957d043247da0b09b8484646b6d",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/y.png"
+    },
+    {
+      "family": "xbox",
+      "control": "LB",
+      "author": "Zacksly",
+      "source": "zacksly/LB.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Left Bumper.png",
+      "sourceSha256": "7e96e1c49cfb1552b16b6c7efa22a24eaecfa6bc3496475704ef9fdd6f889c42",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/lb.png"
+    },
+    {
+      "family": "xbox",
+      "control": "RB",
+      "author": "Zacksly",
+      "source": "zacksly/RB.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Right Bumper.png",
+      "sourceSha256": "6a8f72c6a5655e913b8071e151f667138712ce7f82f401476c2827e5217dcb89",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/rb.png"
+    },
+    {
+      "family": "xbox",
+      "control": "LT",
+      "author": "Zacksly",
+      "source": "zacksly/LT.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Left Trigger.png",
+      "sourceSha256": "ce4db50e4428ee7d8b7bfafd0bd891f906d285f48a873293715f4223612e867b",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/lt.png"
+    },
+    {
+      "family": "xbox",
+      "control": "RT",
+      "author": "Zacksly",
+      "source": "zacksly/RT.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Right Trigger.png",
+      "sourceSha256": "68b392ebd5cbd7931a8f82473048d20937094642c4e1af88950185e7ae0a9674",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/rt.png"
+    },
+    {
+      "family": "xbox",
+      "control": "L3",
+      "author": "Zacksly",
+      "source": "zacksly/L3.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Left Stick Click.png",
+      "sourceSha256": "b8c21d107ea5e28b9f2168627799ef2646f79a4143c9ba0be3eaa242b2ed8f39",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/l3.png"
+    },
+    {
+      "family": "xbox",
+      "control": "R3",
+      "author": "Zacksly",
+      "source": "zacksly/R3.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Right Stick Click.png",
+      "sourceSha256": "0039185ee65898dbc1176f533ebab41ec2fcc10479919b6d1bb159cf1f6c96d6",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/r3.png"
+    },
+    {
+      "family": "xbox",
+      "control": "MENU",
+      "author": "Zacksly",
+      "source": "zacksly/MENU.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Menu.png",
+      "sourceSha256": "b924b1dc6d03a55afc8631c4ff60656c325111727accaceb6b9169379d12635e",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/menu.png"
+    },
+    {
+      "family": "xbox",
+      "control": "VIEW",
+      "author": "Zacksly",
+      "source": "zacksly/VIEW.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/View.png",
+      "sourceSha256": "f54e54460f989ba1f99c37a5747bd59f4716047ed21d1f1f71cd86d0f736eb4d",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/view.png"
+    },
+    {
+      "family": "xbox",
+      "control": "LEFT_STICK",
+      "author": "Zacksly",
+      "source": "zacksly/LEFT_STICK.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Left Stick.png",
+      "sourceSha256": "d7400ad3e4ed64cce2215cb9dd676e34e6f42b881b4f9d6e13579467866d13c1",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/left_stick.png"
+    },
+    {
+      "family": "xbox",
+      "control": "RIGHT_STICK",
+      "author": "Zacksly",
+      "source": "zacksly/RIGHT_STICK.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/Right Stick.png",
+      "sourceSha256": "f9c6366be46a1ea670d1723b71a1b9a68bf5a64965993c3c844495080eb0d4d9",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/right_stick.png"
+    },
+    {
+      "family": "xbox",
+      "control": "DPAD",
+      "author": "Zacksly",
+      "source": "zacksly/DPAD.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/D-Pad.png",
+      "sourceSha256": "524f56c6689e75d93341b7e068c4208086ceea8acfa753d5500ec3529757744d",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/dpad.png"
+    },
+    {
+      "family": "xbox",
+      "control": "DPAD_UP",
+      "author": "Zacksly",
+      "source": "zacksly/DPAD_UP.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/D-Pad Up.png",
+      "sourceSha256": "3057e07529639664df75a762a6a2a5baa34d4be06bca6dce870cefad56e2a12c",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_up.png"
+    },
+    {
+      "family": "xbox",
+      "control": "DPAD_DOWN",
+      "author": "Zacksly",
+      "source": "zacksly/DPAD_DOWN.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/D-Pad Down.png",
+      "sourceSha256": "302e081125756d6e9080231d97ab13a23d923532f675637473cd77cc911c7a68",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_down.png"
+    },
+    {
+      "family": "xbox",
+      "control": "DPAD_LEFT",
+      "author": "Zacksly",
+      "source": "zacksly/DPAD_LEFT.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/D-Pad Left.png",
+      "sourceSha256": "bce65f6df57ca799339cf5a931d5a2bc0306add78d8c0769ca72e2a4d65711ea",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_left.png"
+    },
+    {
+      "family": "xbox",
+      "control": "DPAD_RIGHT",
+      "author": "Zacksly",
+      "source": "zacksly/DPAD_RIGHT.png",
+      "archiveEntry": "Xbox Series Button Icons and Controls/Buttons Outline/White/256w/D-Pad Right.png",
+      "sourceSha256": "3c4d57b4f704e3122e143092ace81ee692a63908e60cb08ab3e143d2f328ec18",
+      "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_right.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "A",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/A.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_a_outline.png",
+      "sourceSha256": "60c063951f647e6f3511db8dec433d2bb5890628711b0bf18f264592389c8ef1",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/a.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "B",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/B.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_b_outline.png",
+      "sourceSha256": "b4139033eba502b6a521cb05afd630349fa899b8559d962ab5dd3e31dcded864",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/b.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "X",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/X.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_x_outline.png",
+      "sourceSha256": "9cf584950945a6fcaed3bf12b2d432e57117c5df8319497929399016681ab3c4",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/x.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "Y",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/Y.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_y_outline.png",
+      "sourceSha256": "4eef130d450c491be4c3c11140610d6475e7423c6f032ad9cd3376ec1d023f20",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/y.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "LB",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/LB.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_l1_outline.png",
+      "sourceSha256": "d438279a4c32236b73df9119b87a94849df92c674f2ee21b462c441fd66925b8",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/lb.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "RB",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/RB.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_r1_outline.png",
+      "sourceSha256": "2baa2ef62d0bb74963cd163b8dbb68fb398261386a500b05bfb1dabcaa517338",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/rb.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "LT",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/LT.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_l2_outline.png",
+      "sourceSha256": "38c4da8c14d472a5d3c3ac9ff9950bfb8b837b586ac4bf503ad7398b1a36d048",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/lt.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "RT",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/RT.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_r2_outline.png",
+      "sourceSha256": "c242bee319206e65b1dbf80013fe4b2679deda066b13d15578074875ab276dab",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/rt.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "L3",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/L3.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_stick_l_press.png",
+      "sourceSha256": "8c772ed1203af9c4923dd1bb5a67f96814a08d9569130ae8435a49fc3b33ab4e",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/l3.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "R3",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/R3.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_stick_r_press.png",
+      "sourceSha256": "f0e502e4868f6d21b4bfb03e544696bbc534649db8be808259096ceefb3968ee",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/r3.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "MENU",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/MENU.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_options_outline.png",
+      "sourceSha256": "2342bfc3f2145eb2037c030bc5cdad7c262139d75a97138b1996e8c0f3cfb7b4",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/menu.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "VIEW",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/VIEW.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_button_view_outline.png",
+      "sourceSha256": "8579401f36f53adfda906a493ab4081ff4a1fec8deb439a3c34dd6ed3f643879",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/view.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "LEFT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/LEFT_STICK.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_stick_l.png",
+      "sourceSha256": "68edebe98e5efdbfc800154bcc523e67c6b6812df39ee45cf5a6362d6d670861",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/left_stick.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "RIGHT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/RIGHT_STICK.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_stick_r.png",
+      "sourceSha256": "0b4b5433b6706aea900c26523b07ccf430a3d203407773552a1bda8c3d5ddfb7",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/right_stick.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "DPAD",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/DPAD.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_dpad.png",
+      "sourceSha256": "8a8443c22a3f210a2634eda9e4704780b41b6d96325ee786d632a534edbb0a90",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "DPAD_UP",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/DPAD_UP.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_dpad_up_outline.png",
+      "sourceSha256": "b9a2e343414fb25df5bdd145dceef22448eedc2fbfaf87f8fc5c82ae65cce52a",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_up.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "DPAD_DOWN",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/DPAD_DOWN.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_dpad_down_outline.png",
+      "sourceSha256": "c25ce9ad377a0d3f11f2886923106177d14148f10b558a6ce668393a43d15989",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_down.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "DPAD_LEFT",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/DPAD_LEFT.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_dpad_left_outline.png",
+      "sourceSha256": "9a745da25db1791460407cd343ad5420654d50805bf4a3b994903c16521b8a1a",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_left.png"
+    },
+    {
+      "family": "steam-deck",
+      "control": "DPAD_RIGHT",
+      "author": "Kenney",
+      "source": "kenney/Steam Deck/DPAD_RIGHT.png",
+      "archiveEntry": "Steam Deck/Double/steamdeck_dpad_right_outline.png",
+      "sourceSha256": "cd213fcdcd6f12045968509101fe80263b7e344aedc13b61eb5927f9f4e28a24",
+      "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_right.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "A",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/A.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_a_outline.png",
+      "sourceSha256": "60c063951f647e6f3511db8dec433d2bb5890628711b0bf18f264592389c8ef1",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/a.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "B",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/B.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_b_outline.png",
+      "sourceSha256": "b4139033eba502b6a521cb05afd630349fa899b8559d962ab5dd3e31dcded864",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/b.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "X",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/X.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_x_outline.png",
+      "sourceSha256": "9cf584950945a6fcaed3bf12b2d432e57117c5df8319497929399016681ab3c4",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/x.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "Y",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/Y.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_y_outline.png",
+      "sourceSha256": "4eef130d450c491be4c3c11140610d6475e7423c6f032ad9cd3376ec1d023f20",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/y.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "LB",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LB.png",
+      "archiveEntry": "Xbox Series/Double/xbox_lb_outline.png",
+      "sourceSha256": "b1c95a1576fa3284a3c2791a53f9d126a4e4cf9d66f5c05a40744a1a7b3baa4c",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/lb.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "RB",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RB.png",
+      "archiveEntry": "Xbox Series/Double/xbox_rb_outline.png",
+      "sourceSha256": "614914e9fd5e1a5615c8c94deed378516351140e1f38ddd02da768c1c7b0517e",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/rb.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "LT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_lt_outline.png",
+      "sourceSha256": "2acc348855449d0ef23d0a4d74249cfe280cf936fcf33e3e66df7188d608c72a",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/lt.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "RT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_rt_outline.png",
+      "sourceSha256": "c955c3db9519999d59d3f8fe146ed836f7344ac7165faa31fb536ad487a2f28e",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/rt.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "L3",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/L3.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_l_press.png",
+      "sourceSha256": "8c772ed1203af9c4923dd1bb5a67f96814a08d9569130ae8435a49fc3b33ab4e",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/l3.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "R3",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/R3.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_r_press.png",
+      "sourceSha256": "f0e502e4868f6d21b4bfb03e544696bbc534649db8be808259096ceefb3968ee",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/r3.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "MENU",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/MENU.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_menu_outline.png",
+      "sourceSha256": "4a0378365985510f798d67aad3738bb6553146b3093e1ae12a966b18bd59936a",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/menu.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "VIEW",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/VIEW.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_view_outline.png",
+      "sourceSha256": "f02e420cd758fc1d64005f5c2157a328547e1ba9244edd2a3112d99d3a7dc57d",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/view.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "LEFT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LEFT_STICK.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_l.png",
+      "sourceSha256": "68edebe98e5efdbfc800154bcc523e67c6b6812df39ee45cf5a6362d6d670861",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/left_stick.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "RIGHT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RIGHT_STICK.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_r.png",
+      "sourceSha256": "0b4b5433b6706aea900c26523b07ccf430a3d203407773552a1bda8c3d5ddfb7",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/right_stick.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "DPAD",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad.png",
+      "sourceSha256": "8a8443c22a3f210a2634eda9e4704780b41b6d96325ee786d632a534edbb0a90",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "DPAD_UP",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_UP.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_up_outline.png",
+      "sourceSha256": "b9a2e343414fb25df5bdd145dceef22448eedc2fbfaf87f8fc5c82ae65cce52a",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_up.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "DPAD_DOWN",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_DOWN.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_down_outline.png",
+      "sourceSha256": "c25ce9ad377a0d3f11f2886923106177d14148f10b558a6ce668393a43d15989",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_down.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "DPAD_LEFT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_LEFT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_left_outline.png",
+      "sourceSha256": "9a745da25db1791460407cd343ad5420654d50805bf4a3b994903c16521b8a1a",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_left.png"
+    },
+    {
+      "family": "rog-ally",
+      "control": "DPAD_RIGHT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_RIGHT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_right_outline.png",
+      "sourceSha256": "cd213fcdcd6f12045968509101fe80263b7e344aedc13b61eb5927f9f4e28a24",
+      "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_right.png"
+    },
+    {
+      "family": "generic",
+      "control": "A",
+      "author": "Kenney",
+      "source": "kenney/Nintendo Switch/A.png",
+      "archiveEntry": "Nintendo Switch/Double/switch_buttons_down_outline.png",
+      "sourceSha256": "64b5b5bb0131d071cd22ccd02f7718d69df15915f2d24a317ac1be119485436b",
+      "output": "graphics/sectorpad/controls/glyphs/generic/a.png"
+    },
+    {
+      "family": "generic",
+      "control": "B",
+      "author": "Kenney",
+      "source": "kenney/Nintendo Switch/B.png",
+      "archiveEntry": "Nintendo Switch/Double/switch_buttons_right_outline.png",
+      "sourceSha256": "38f980aaace3e6f2db0780a5c5c17776dfa50ea7f7752b561cf4712bcbefe389",
+      "output": "graphics/sectorpad/controls/glyphs/generic/b.png"
+    },
+    {
+      "family": "generic",
+      "control": "X",
+      "author": "Kenney",
+      "source": "kenney/Nintendo Switch/X.png",
+      "archiveEntry": "Nintendo Switch/Double/switch_buttons_left_outline.png",
+      "sourceSha256": "41ad787e8775e6f42e4e61c8582eb68707cd418f5480f0dd468a8fc4b094c4cc",
+      "output": "graphics/sectorpad/controls/glyphs/generic/x.png"
+    },
+    {
+      "family": "generic",
+      "control": "Y",
+      "author": "Kenney",
+      "source": "kenney/Nintendo Switch/Y.png",
+      "archiveEntry": "Nintendo Switch/Double/switch_buttons_up_outline.png",
+      "sourceSha256": "34527ab1a2d9cea4624ab5e1f384dfcdd2bb0a9511665ca431ca48224ba33756",
+      "output": "graphics/sectorpad/controls/glyphs/generic/y.png"
+    },
+    {
+      "family": "generic",
+      "control": "LB",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LB.png",
+      "archiveEntry": "Xbox Series/Double/xbox_lb_outline.png",
+      "sourceSha256": "b1c95a1576fa3284a3c2791a53f9d126a4e4cf9d66f5c05a40744a1a7b3baa4c",
+      "output": "graphics/sectorpad/controls/glyphs/generic/lb.png"
+    },
+    {
+      "family": "generic",
+      "control": "RB",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RB.png",
+      "archiveEntry": "Xbox Series/Double/xbox_rb_outline.png",
+      "sourceSha256": "614914e9fd5e1a5615c8c94deed378516351140e1f38ddd02da768c1c7b0517e",
+      "output": "graphics/sectorpad/controls/glyphs/generic/rb.png"
+    },
+    {
+      "family": "generic",
+      "control": "LT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_lt_outline.png",
+      "sourceSha256": "2acc348855449d0ef23d0a4d74249cfe280cf936fcf33e3e66df7188d608c72a",
+      "output": "graphics/sectorpad/controls/glyphs/generic/lt.png"
+    },
+    {
+      "family": "generic",
+      "control": "RT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_rt_outline.png",
+      "sourceSha256": "c955c3db9519999d59d3f8fe146ed836f7344ac7165faa31fb536ad487a2f28e",
+      "output": "graphics/sectorpad/controls/glyphs/generic/rt.png"
+    },
+    {
+      "family": "generic",
+      "control": "L3",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/L3.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_l_press.png",
+      "sourceSha256": "8c772ed1203af9c4923dd1bb5a67f96814a08d9569130ae8435a49fc3b33ab4e",
+      "output": "graphics/sectorpad/controls/glyphs/generic/l3.png"
+    },
+    {
+      "family": "generic",
+      "control": "R3",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/R3.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_r_press.png",
+      "sourceSha256": "f0e502e4868f6d21b4bfb03e544696bbc534649db8be808259096ceefb3968ee",
+      "output": "graphics/sectorpad/controls/glyphs/generic/r3.png"
+    },
+    {
+      "family": "generic",
+      "control": "MENU",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/MENU.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_menu_outline.png",
+      "sourceSha256": "4a0378365985510f798d67aad3738bb6553146b3093e1ae12a966b18bd59936a",
+      "output": "graphics/sectorpad/controls/glyphs/generic/menu.png"
+    },
+    {
+      "family": "generic",
+      "control": "VIEW",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/VIEW.png",
+      "archiveEntry": "Xbox Series/Double/xbox_button_view_outline.png",
+      "sourceSha256": "f02e420cd758fc1d64005f5c2157a328547e1ba9244edd2a3112d99d3a7dc57d",
+      "output": "graphics/sectorpad/controls/glyphs/generic/view.png"
+    },
+    {
+      "family": "generic",
+      "control": "LEFT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/LEFT_STICK.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_l.png",
+      "sourceSha256": "68edebe98e5efdbfc800154bcc523e67c6b6812df39ee45cf5a6362d6d670861",
+      "output": "graphics/sectorpad/controls/glyphs/generic/left_stick.png"
+    },
+    {
+      "family": "generic",
+      "control": "RIGHT_STICK",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/RIGHT_STICK.png",
+      "archiveEntry": "Xbox Series/Double/xbox_stick_r.png",
+      "sourceSha256": "0b4b5433b6706aea900c26523b07ccf430a3d203407773552a1bda8c3d5ddfb7",
+      "output": "graphics/sectorpad/controls/glyphs/generic/right_stick.png"
+    },
+    {
+      "family": "generic",
+      "control": "DPAD",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad.png",
+      "sourceSha256": "8a8443c22a3f210a2634eda9e4704780b41b6d96325ee786d632a534edbb0a90",
+      "output": "graphics/sectorpad/controls/glyphs/generic/dpad.png"
+    },
+    {
+      "family": "generic",
+      "control": "DPAD_UP",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_UP.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_up_outline.png",
+      "sourceSha256": "b9a2e343414fb25df5bdd145dceef22448eedc2fbfaf87f8fc5c82ae65cce52a",
+      "output": "graphics/sectorpad/controls/glyphs/generic/dpad_up.png"
+    },
+    {
+      "family": "generic",
+      "control": "DPAD_DOWN",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_DOWN.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_down_outline.png",
+      "sourceSha256": "c25ce9ad377a0d3f11f2886923106177d14148f10b558a6ce668393a43d15989",
+      "output": "graphics/sectorpad/controls/glyphs/generic/dpad_down.png"
+    },
+    {
+      "family": "generic",
+      "control": "DPAD_LEFT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_LEFT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_left_outline.png",
+      "sourceSha256": "9a745da25db1791460407cd343ad5420654d50805bf4a3b994903c16521b8a1a",
+      "output": "graphics/sectorpad/controls/glyphs/generic/dpad_left.png"
+    },
+    {
+      "family": "generic",
+      "control": "DPAD_RIGHT",
+      "author": "Kenney",
+      "source": "kenney/Xbox Series/DPAD_RIGHT.png",
+      "archiveEntry": "Xbox Series/Double/xbox_dpad_right_outline.png",
+      "sourceSha256": "cd213fcdcd6f12045968509101fe80263b7e344aedc13b61eb5927f9f4e28a24",
+      "output": "graphics/sectorpad/controls/glyphs/generic/dpad_right.png"
+    }
+  ]
+}

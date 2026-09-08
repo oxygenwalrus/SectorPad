@@ -52,3 +52,13 @@ The JNI header hashes and exact source URLs are retained in `src/main/native/inc
 [SSMSControllerEx](https://github.com/katemonster33/SSMSControllerEx) and the original [SSMSController](https://github.com/razuhl/SSMSController) were inspected to understand controller behavior and existing game UI paths. They are acknowledged as research references; SectorPad does not bundle their controller plugin, global input shims, or user-modified Desktop artifacts. LunaLib, LazyLib, and Console Commands remain separately installed dependencies/integrations with their respective authors' licenses.
 
 The development source tree may retain JNA 5.18.1 JARs and [their license notice](licenses/JNA-LICENSE.txt) from an earlier prototype. They are not runtime dependencies and are not listed in `mod_info.json`. The current Windows bridge uses the mod's own JNI binary.
+
+
+## Controller interface artwork (1.5.0)
+
+- **Steam Deck SVG line art - Valve Corporation.** Supplied by Valve specifically for in-game Steam Deck input callouts. See `licenses/device-art` for the retained permission/source notice. Valve artwork is not relicensed under SectorPad's Apache license.
+- **Xbox Series Button Icons and Controls - Zacksly.** CC BY 3.0. https://zacksly.itch.io/xbox-series-button-icons-and-controls . SectorPad converts/scales the controller illustration and crops prompt margins for rendering, with runtime color/opacity and live overlays. Credit and license are included under `licenses/control-prompts` and `licenses/device-art`.
+- **ROG Ally illustration - victor-borges / Handheld Controller Glyphs.** MIT, copyright 2024 victor-borges, with the upstream honjow theme acknowledged. https://github.com/victor-borges/handheld-controller-glyphs . Rasterized and prepared for UI tinting; retained notices under `licenses/device-art`.
+- **Input Prompts - Kenney.** CC0. https://kenney.nl/assets/input-prompts . Selected Deck and Xbox-layout prompt images are cropped/scaled for SectorPad. Notices under `licenses/control-prompts`.
+
+These assets remain under their listed permissions. Source provenance and exact input/output hashes are recorded under `vendor/ui-art` in the source archive. See `docs/CONTROLLER_ART.md` for adaptation and validation details.

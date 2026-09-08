@@ -46,6 +46,18 @@ Automatic appearance uses explicit recognizable names. XInput and Steam Virtual 
 
 These component specimens use the production renderers with synthetic connected/disconnected frames. They do not establish live handheld acceptance or full native LunaLib composition. Run the same build and offscreen commands above to reproduce.
 
+## Sourced controller artwork (1.5.0)
+
+The current interface uses Valve's Steam Deck SVG illustration, Zacksly's Xbox Series illustration and prompts, the community Ally SVG and Kenney Input Prompts 1.5A. The authentic device contours remain intact; restrained mapped/selected rings and live dots follow the actual button and stick positions. Prompts preserve the artists' shapes and aspect ratios while taking on the UI's text/focus colors. [Sources, adaptation and credits](CONTROLLER_ART.md).
+
+![Sourced device illustrations with synthetic live input](evidence/sourced-devices-offscreen-1280x800.png)
+
+![Sourced glyphs and remapped prompt wrapping](evidence/sourced-glyphs-offscreen-1280x800.png)
+
+![Refit workspace with sourced Xbox prompts](evidence/sourced-refit-offscreen-1280x720.png)
+
+The production offscreen review passed 14,116 assertions and required all 79 new textures to be rendered: three device images and 76 glyphs. It exercises 720p, 800p and 1080p at requested UI scales 1.0 and 1.8, live/disconnected/schema states, missing artwork, and restoration of sprite and OpenGL state. These are synthetic frames, not live gameplay or physical handheld acceptance. The earlier screenshots above document the preceding visual iterations.
+
 ## Native skin boundary
 
 The same 57 verified panel, border, tab and chassis paths are used. Transparent centre tiles, tile gutters, side cutouts and the native power-button aperture remain intact. Only original mod-provided frame artwork and the existing session UI palette change; native text, indicators, icons, warning symbols, input semantics and saves retain their original behavior. [HUD skin coverage](HUD_SKIN.md) lists every family and compatibility boundary.

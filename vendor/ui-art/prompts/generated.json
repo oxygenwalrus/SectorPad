@@ -1,0 +1,610 @@
+[
+  {
+    "family": "xbox",
+    "control": "A",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/a.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "603f3f4704031dc746c9f57578585a0744821970a87946359eb900abb9487d36"
+  },
+  {
+    "family": "xbox",
+    "control": "B",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/b.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "1d2ca000ecb2788e059efcb1fec490289e9d3de123d3a9d4d415d4719eb518f3"
+  },
+  {
+    "family": "xbox",
+    "control": "X",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/x.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "df0e23ac713d41b035591c2a12f93e9fbdd9d00143637f12a3142b8dffc49207"
+  },
+  {
+    "family": "xbox",
+    "control": "Y",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/y.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "646594b1ae3d4cefb4ca718c3962908374fe6c59a615754d0cd15eed129d9c4e"
+  },
+  {
+    "family": "xbox",
+    "control": "LB",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/lb.png",
+    "width": 220,
+    "height": 132,
+    "sha256": "1d47db86d4e5534d89918a4dad418858da1687e8c3c6a60efc3a2941b249682e"
+  },
+  {
+    "family": "xbox",
+    "control": "RB",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/rb.png",
+    "width": 220,
+    "height": 132,
+    "sha256": "1f99d3e49c7bcf0b9e70c9f6e2ae355cde342763f98f18a99a7f8e462d6f0833"
+  },
+  {
+    "family": "xbox",
+    "control": "LT",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/lt.png",
+    "width": 172,
+    "height": 178,
+    "sha256": "9c8e6ede51c2bc2f84dcab0db13ab3b83f6fef1b2ca1a745ccd20fdc2855e308"
+  },
+  {
+    "family": "xbox",
+    "control": "RT",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/rt.png",
+    "width": 172,
+    "height": 178,
+    "sha256": "41ad0023aa7e2b041c8f5a7e90921096c65d35d3f5b950c43c4222dcab566e09"
+  },
+  {
+    "family": "xbox",
+    "control": "L3",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/l3.png",
+    "width": 211,
+    "height": 165,
+    "sha256": "8e1ec2158e0a226fec2e50e6e3dfbc4f8bbe50a94d0e1bfa805ed0a1a78984f7"
+  },
+  {
+    "family": "xbox",
+    "control": "R3",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/r3.png",
+    "width": 211,
+    "height": 165,
+    "sha256": "49de63e81cfba08ae3b9c94f2310deb56cdd715ed7a9f6b9e540b6581a4ae810"
+  },
+  {
+    "family": "xbox",
+    "control": "MENU",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/menu.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "3468ea7af78b7ed34510fd22433eb71985370f7536ffce1cc5e7a31e5fa847e3"
+  },
+  {
+    "family": "xbox",
+    "control": "VIEW",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/view.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "187029a88d10dffc35c7d3ab8f00730b1bc7f55258c713fd4b29b8deb9e02e4c"
+  },
+  {
+    "family": "xbox",
+    "control": "LEFT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/left_stick.png",
+    "width": 188,
+    "height": 188,
+    "sha256": "222b703b519e79843f09a9ce0f7802b35b84d8b911ff4edfd8edce3d254ecd18"
+  },
+  {
+    "family": "xbox",
+    "control": "RIGHT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/right_stick.png",
+    "width": 188,
+    "height": 188,
+    "sha256": "ee14c8fe18f33811907c63794ec29010a9a421367e4ea081bed038ac788b8bf4"
+  },
+  {
+    "family": "xbox",
+    "control": "DPAD",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/dpad.png",
+    "width": 186,
+    "height": 186,
+    "sha256": "822786f71972f885a06a0b2213fe313b21574901f79e89c64c26a1f1393a94be"
+  },
+  {
+    "family": "xbox",
+    "control": "DPAD_UP",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_up.png",
+    "width": 186,
+    "height": 186,
+    "sha256": "a3563337d4438e0cbdaeb6e68a96afdb542df55191ee7553ea4873e1d2ca47c9"
+  },
+  {
+    "family": "xbox",
+    "control": "DPAD_DOWN",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_down.png",
+    "width": 186,
+    "height": 186,
+    "sha256": "37fc8e9cd49ca51c3e305ca1e50c99fc5d2330fbd17e417e07a256b08d0e379a"
+  },
+  {
+    "family": "xbox",
+    "control": "DPAD_LEFT",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_left.png",
+    "width": 186,
+    "height": 186,
+    "sha256": "efe3ae66fccbb2c3f81dffc6167b5e4d86dbc9d60cc8cb627a415ebfb59b446f"
+  },
+  {
+    "family": "xbox",
+    "control": "DPAD_RIGHT",
+    "output": "graphics/sectorpad/controls/glyphs/xbox/dpad_right.png",
+    "width": 186,
+    "height": 186,
+    "sha256": "e8daf4f142952873869efbd84ad6635ae9e77b47fd465c2bc9bf51714f35e121"
+  },
+  {
+    "family": "steam-deck",
+    "control": "A",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/a.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c4b8efff4e0f57bec5944ab797ea14491b87a04507c76cff05f5fa34532dcb81"
+  },
+  {
+    "family": "steam-deck",
+    "control": "B",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/b.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "e4e93e7df580dd3413e42cbfa06811fcad95ffda361fe76213b29c3d743841f7"
+  },
+  {
+    "family": "steam-deck",
+    "control": "X",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/x.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c4615a669170221c2946cb8c00880015619391d10aa3047bb362b94cb462f23e"
+  },
+  {
+    "family": "steam-deck",
+    "control": "Y",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/y.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "fe225a60c10acbec47ad8c6be2457308d03a0d236a3fdaaf6e491e20c85d5ade"
+  },
+  {
+    "family": "steam-deck",
+    "control": "LB",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/lb.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ce8cf07ecc23c2b5478da3d1704f85c70af3a644f0f8f7f7c7db0d7a3656d2ea"
+  },
+  {
+    "family": "steam-deck",
+    "control": "RB",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/rb.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "57a529f2cee632f7731159433c9f7421057aa46e17ea8d93394b75fa935b6775"
+  },
+  {
+    "family": "steam-deck",
+    "control": "LT",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/lt.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c4c3cd3290d14a1ea4c613259fc7af5740994c44e98e625211eb6fb445a503b6"
+  },
+  {
+    "family": "steam-deck",
+    "control": "RT",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/rt.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c98bfe7a3f051365b95b3303b02dbe73bb77755773400ee52ae7abd33ae32617"
+  },
+  {
+    "family": "steam-deck",
+    "control": "L3",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/l3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "47ade4a05cf2537c09c54d42c91eed082345f594d25a3f6919104130d5a95399"
+  },
+  {
+    "family": "steam-deck",
+    "control": "R3",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/r3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "d8072529fcfd7f363b3808a143ed1e7031977b9fe0e2284a431e934fe3619d9e"
+  },
+  {
+    "family": "steam-deck",
+    "control": "MENU",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/menu.png",
+    "width": 82,
+    "height": 42,
+    "sha256": "b7ee80b7cb3a5aa6281bf1ac4fadea91f2aafbd3df953b849d9d2c93650fdbed"
+  },
+  {
+    "family": "steam-deck",
+    "control": "VIEW",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/view.png",
+    "width": 82,
+    "height": 42,
+    "sha256": "6f02838b672f4b85af942b54b7363657fe20819aecada726c205c5178a008ead"
+  },
+  {
+    "family": "steam-deck",
+    "control": "LEFT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/left_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "1ae430fbdf4580dafdabf361e2b979b52a9d66071781c161ef2ee91cb6d41f99"
+  },
+  {
+    "family": "steam-deck",
+    "control": "RIGHT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/right_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "457ddfa42405f1cb5a577b3713738db5a0ee3634d01da87f7f4883c526f4c150"
+  },
+  {
+    "family": "steam-deck",
+    "control": "DPAD",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "a995dd1773d18b2d822908b1a06370385c56805e918caa0ad72471e1f4dabe9a"
+  },
+  {
+    "family": "steam-deck",
+    "control": "DPAD_UP",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_up.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "595f3b7f1901e24850b8bf8f21a38e4f167dfc76cedd40acd2eba096e5c58fce"
+  },
+  {
+    "family": "steam-deck",
+    "control": "DPAD_DOWN",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_down.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "d363e437bf85f7aecd0707b08e2f0344cdc2279f344e01854af58f2d05f0e29e"
+  },
+  {
+    "family": "steam-deck",
+    "control": "DPAD_LEFT",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_left.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ffeec09a1b0ea73dd17555e597423f259fb8b09a445818a43fac1b940eceddf3"
+  },
+  {
+    "family": "steam-deck",
+    "control": "DPAD_RIGHT",
+    "output": "graphics/sectorpad/controls/glyphs/steam-deck/dpad_right.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ab37fdb1c3a2ea0fa89ebcb4ca041aaa00a5fa4e62dbf3f0cb20b5927b17f170"
+  },
+  {
+    "family": "rog-ally",
+    "control": "A",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/a.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c4b8efff4e0f57bec5944ab797ea14491b87a04507c76cff05f5fa34532dcb81"
+  },
+  {
+    "family": "rog-ally",
+    "control": "B",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/b.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "e4e93e7df580dd3413e42cbfa06811fcad95ffda361fe76213b29c3d743841f7"
+  },
+  {
+    "family": "rog-ally",
+    "control": "X",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/x.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "c4615a669170221c2946cb8c00880015619391d10aa3047bb362b94cb462f23e"
+  },
+  {
+    "family": "rog-ally",
+    "control": "Y",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/y.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "fe225a60c10acbec47ad8c6be2457308d03a0d236a3fdaaf6e491e20c85d5ade"
+  },
+  {
+    "family": "rog-ally",
+    "control": "LB",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/lb.png",
+    "width": 98,
+    "height": 66,
+    "sha256": "c84166a12910beba416bfd2b3a739451bca647d38b0e5c6a9d4c0419cf6c152d"
+  },
+  {
+    "family": "rog-ally",
+    "control": "RB",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/rb.png",
+    "width": 98,
+    "height": 66,
+    "sha256": "ac44868fc966c624112fa1cfad6266ab2c964da29e9d0808d3ccf0499d105f48"
+  },
+  {
+    "family": "rog-ally",
+    "control": "LT",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/lt.png",
+    "width": 98,
+    "height": 90,
+    "sha256": "b261f3a23d4f1e976d4a6b3fe8642d24cf929956d2b4345a503345f7f20b77f1"
+  },
+  {
+    "family": "rog-ally",
+    "control": "RT",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/rt.png",
+    "width": 98,
+    "height": 90,
+    "sha256": "a4832ad9c3b3ebe73260ac32af1c9a0a1981b0c92273cb4870139795d975607e"
+  },
+  {
+    "family": "rog-ally",
+    "control": "L3",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/l3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "47ade4a05cf2537c09c54d42c91eed082345f594d25a3f6919104130d5a95399"
+  },
+  {
+    "family": "rog-ally",
+    "control": "R3",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/r3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "d8072529fcfd7f363b3808a143ed1e7031977b9fe0e2284a431e934fe3619d9e"
+  },
+  {
+    "family": "rog-ally",
+    "control": "MENU",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/menu.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "865428d7f2a222acf874c52993518f6b28b6f6021052bca9694ccf67dd972067"
+  },
+  {
+    "family": "rog-ally",
+    "control": "VIEW",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/view.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "e8119ad56b167ee18184f90c9b340bf02d2f33dcad3520adc6a6e27d59337a3a"
+  },
+  {
+    "family": "rog-ally",
+    "control": "LEFT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/left_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "1ae430fbdf4580dafdabf361e2b979b52a9d66071781c161ef2ee91cb6d41f99"
+  },
+  {
+    "family": "rog-ally",
+    "control": "RIGHT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/right_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "457ddfa42405f1cb5a577b3713738db5a0ee3634d01da87f7f4883c526f4c150"
+  },
+  {
+    "family": "rog-ally",
+    "control": "DPAD",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "a995dd1773d18b2d822908b1a06370385c56805e918caa0ad72471e1f4dabe9a"
+  },
+  {
+    "family": "rog-ally",
+    "control": "DPAD_UP",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_up.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "595f3b7f1901e24850b8bf8f21a38e4f167dfc76cedd40acd2eba096e5c58fce"
+  },
+  {
+    "family": "rog-ally",
+    "control": "DPAD_DOWN",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_down.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "d363e437bf85f7aecd0707b08e2f0344cdc2279f344e01854af58f2d05f0e29e"
+  },
+  {
+    "family": "rog-ally",
+    "control": "DPAD_LEFT",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_left.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ffeec09a1b0ea73dd17555e597423f259fb8b09a445818a43fac1b940eceddf3"
+  },
+  {
+    "family": "rog-ally",
+    "control": "DPAD_RIGHT",
+    "output": "graphics/sectorpad/controls/glyphs/rog-ally/dpad_right.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ab37fdb1c3a2ea0fa89ebcb4ca041aaa00a5fa4e62dbf3f0cb20b5927b17f170"
+  },
+  {
+    "family": "generic",
+    "control": "A",
+    "output": "graphics/sectorpad/controls/glyphs/generic/a.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "dd490c0e15b49ef45deacfe21c4ad1f321426ebc73007162f7d677d56d426197"
+  },
+  {
+    "family": "generic",
+    "control": "B",
+    "output": "graphics/sectorpad/controls/glyphs/generic/b.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "4674c72df0b258a8026eedf89f022a3492f63972fca6044ec22c700afd8bda67"
+  },
+  {
+    "family": "generic",
+    "control": "X",
+    "output": "graphics/sectorpad/controls/glyphs/generic/x.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ca1d5b3bc0957824e6083ad420d377833ff8148707796056bfc30abf92d0b2c5"
+  },
+  {
+    "family": "generic",
+    "control": "Y",
+    "output": "graphics/sectorpad/controls/glyphs/generic/y.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "6c755408701ce5b7115f3ebe0e5ca20eff099167ed0bbaafde12d0abc5325e44"
+  },
+  {
+    "family": "generic",
+    "control": "LB",
+    "output": "graphics/sectorpad/controls/glyphs/generic/lb.png",
+    "width": 98,
+    "height": 66,
+    "sha256": "c84166a12910beba416bfd2b3a739451bca647d38b0e5c6a9d4c0419cf6c152d"
+  },
+  {
+    "family": "generic",
+    "control": "RB",
+    "output": "graphics/sectorpad/controls/glyphs/generic/rb.png",
+    "width": 98,
+    "height": 66,
+    "sha256": "ac44868fc966c624112fa1cfad6266ab2c964da29e9d0808d3ccf0499d105f48"
+  },
+  {
+    "family": "generic",
+    "control": "LT",
+    "output": "graphics/sectorpad/controls/glyphs/generic/lt.png",
+    "width": 98,
+    "height": 90,
+    "sha256": "b261f3a23d4f1e976d4a6b3fe8642d24cf929956d2b4345a503345f7f20b77f1"
+  },
+  {
+    "family": "generic",
+    "control": "RT",
+    "output": "graphics/sectorpad/controls/glyphs/generic/rt.png",
+    "width": 98,
+    "height": 90,
+    "sha256": "a4832ad9c3b3ebe73260ac32af1c9a0a1981b0c92273cb4870139795d975607e"
+  },
+  {
+    "family": "generic",
+    "control": "L3",
+    "output": "graphics/sectorpad/controls/glyphs/generic/l3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "47ade4a05cf2537c09c54d42c91eed082345f594d25a3f6919104130d5a95399"
+  },
+  {
+    "family": "generic",
+    "control": "R3",
+    "output": "graphics/sectorpad/controls/glyphs/generic/r3.png",
+    "width": 98,
+    "height": 106,
+    "sha256": "d8072529fcfd7f363b3808a143ed1e7031977b9fe0e2284a431e934fe3619d9e"
+  },
+  {
+    "family": "generic",
+    "control": "MENU",
+    "output": "graphics/sectorpad/controls/glyphs/generic/menu.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "865428d7f2a222acf874c52993518f6b28b6f6021052bca9694ccf67dd972067"
+  },
+  {
+    "family": "generic",
+    "control": "VIEW",
+    "output": "graphics/sectorpad/controls/glyphs/generic/view.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "e8119ad56b167ee18184f90c9b340bf02d2f33dcad3520adc6a6e27d59337a3a"
+  },
+  {
+    "family": "generic",
+    "control": "LEFT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/generic/left_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "1ae430fbdf4580dafdabf361e2b979b52a9d66071781c161ef2ee91cb6d41f99"
+  },
+  {
+    "family": "generic",
+    "control": "RIGHT_STICK",
+    "output": "graphics/sectorpad/controls/glyphs/generic/right_stick.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "457ddfa42405f1cb5a577b3713738db5a0ee3634d01da87f7f4883c526f4c150"
+  },
+  {
+    "family": "generic",
+    "control": "DPAD",
+    "output": "graphics/sectorpad/controls/glyphs/generic/dpad.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "a995dd1773d18b2d822908b1a06370385c56805e918caa0ad72471e1f4dabe9a"
+  },
+  {
+    "family": "generic",
+    "control": "DPAD_UP",
+    "output": "graphics/sectorpad/controls/glyphs/generic/dpad_up.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "595f3b7f1901e24850b8bf8f21a38e4f167dfc76cedd40acd2eba096e5c58fce"
+  },
+  {
+    "family": "generic",
+    "control": "DPAD_DOWN",
+    "output": "graphics/sectorpad/controls/glyphs/generic/dpad_down.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "d363e437bf85f7aecd0707b08e2f0344cdc2279f344e01854af58f2d05f0e29e"
+  },
+  {
+    "family": "generic",
+    "control": "DPAD_LEFT",
+    "output": "graphics/sectorpad/controls/glyphs/generic/dpad_left.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ffeec09a1b0ea73dd17555e597423f259fb8b09a445818a43fac1b940eceddf3"
+  },
+  {
+    "family": "generic",
+    "control": "DPAD_RIGHT",
+    "output": "graphics/sectorpad/controls/glyphs/generic/dpad_right.png",
+    "width": 98,
+    "height": 98,
+    "sha256": "ab37fdb1c3a2ea0fa89ebcb4ca041aaa00a5fa4e62dbf3f0cb20b5927b17f170"
+  }
+]

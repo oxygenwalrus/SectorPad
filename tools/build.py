@@ -119,7 +119,7 @@ def jar_tree(destination, source, prefix=''):
                 archive.writestr(info,p.read_bytes())
 
 
-PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md','REFIT_WORKSPACE.md','HUD_SKIN.md','UI_REFINEMENT.md')
+PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md','REFIT_WORKSPACE.md','HUD_SKIN.md','UI_REFINEMENT.md','CONTROLLER_ART.md')
 SOURCE_VENDOR=('jamepad-2.30.0.0.jar','jamepad-2.30.0.0-sources.jar','jamepad-2.30.0.0.pom','gdx-jnigen-loader-2.2.0.jar','gamecontrollerdb-commit.txt')
 NATIVE_PAYLOADS=('windows-x86_64/jamepad64.dll','linux-x86_64/libjamepad64.so','windows-x86_64/sectorpad-input-windows-x86_64.dll')
 
@@ -158,6 +158,7 @@ def package_source():
     copy_public_docs(target/'docs',design_history=True)
     (target/'vendor').mkdir()
     for name in SOURCE_VENDOR:shutil.copy2(ROOT/'vendor'/name,target/'vendor'/name)
+    shutil.copytree(ROOT/'vendor/ui-art',target/'vendor/ui-art')
     changed=target/'third_party/jamepad/ControllerManager.java';changed.parent.mkdir(parents=True)
     shutil.copy2(ROOT/'build/jamepad-adapter/src/com/studiohartman/jamepad/ControllerManager.java',changed)
     source_manifest=file_manifest(target)
@@ -186,6 +187,8 @@ def main():
         return
     adapt_jamepad(javac)
     run([sys.executable,ROOT/'tools/generate-hud-theme.py','--check'])
+    run([sys.executable,ROOT/'tools/generate-control-glyphs.py','--check'])
+    run([sys.executable,ROOT/'tools/generate-device-art.py','--check'])
     cp=classpath(pathlib.Path(args.game))
     native=prepare_natives()
     if os.name=='nt':run([sys.executable,ROOT/'tools/build-native-windows.py'])

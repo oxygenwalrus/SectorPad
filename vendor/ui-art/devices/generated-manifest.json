@@ -1,0 +1,29 @@
+{
+  "steam-deck": {
+    "source": "vendor/ui-art/devices/steamdeckFront.svg",
+    "source_sha256": "41d2f0e4d2eedea871d5b1a29d961e6958a5c56edbbb28c8677bc69c5dfcae94",
+    "output": "mod/graphics/sectorpad/controls/devices/steam-deck.png",
+    "output_sha256": "aa0993eb51071c05342cfb2cfeaaf400b9dcd85f7861b9e393b62a3f320b2f45",
+    "width": 1642,
+    "height": 664,
+    "sharp": "0.35.4"
+  },
+  "rog-ally": {
+    "source": "vendor/ui-art/devices/rog-ally.svg",
+    "source_sha256": "b1ae8034faeee5a3afb41ead5d24777aa3a20502b23d9d0c54d0c48fff53d392",
+    "output": "mod/graphics/sectorpad/controls/devices/rog-ally.png",
+    "output_sha256": "838bc93a111864b3597dacd7a81a0249c48b6bcfb8133e3d411cc5227bb1fdf7",
+    "width": 1596,
+    "height": 664,
+    "sharp": "0.35.4"
+  },
+  "xbox": {
+    "source": "vendor/ui-art/devices/xbox-controller-outline.svg",
+    "source_sha256": "71a6f4661d51a4c2ac6440ecf3afd3c8fd2cad9caa4ef01868e6851dfedca661",
+    "output": "mod/graphics/sectorpad/controls/devices/xbox.png",
+    "output_sha256": "3a97f5c2ec9e253de99832762e76fdf264f78897242cdab3349d6c358cc63180",
+    "width": 955,
+    "height": 664,
+    "sharp": "0.35.4"
+  }
+}

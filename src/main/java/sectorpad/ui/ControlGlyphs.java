@@ -6,7 +6,7 @@ import org.lwjgl.opengl.GL11;
 import sectorpad.core.DeviceVisual;
 import static sectorpad.ui.TripadTheme.*;
 
-/** Original vector controller legends. Each call restores the host's OpenGL state. */
+/** Licensed controller prompt artwork with original vector fallbacks. Restores host OpenGL state. */
 public final class ControlGlyphs {
     private static LazyFont.DrawableString label;
     private static boolean fontAttempted;
@@ -14,10 +14,7 @@ public final class ControlGlyphs {
 
     public static float width(String control,DeviceVisual visual,float height) {
         if(!PromptRenderer.recognized(control)||!Float.isFinite(height)||height<=0)return 0;
-        return switch(control){
-            case "LB","RB","LT","RT" -> height*1.42f;
-            default -> height;
-        };
+        return height*artworkAspect(control,visual);
     }
 
     public static void draw(String control,DeviceVisual visual,float cx,float cy,float height,boolean active,float opacity) {
@@ -25,6 +22,12 @@ public final class ControlGlyphs {
                 ||height<=0||!Float.isFinite(opacity)||opacity<=0)return;
         if(visual==null)visual=DeviceVisual.GENERIC;
         opacity=Math.min(1,opacity);
+        Color artworkInk=active?FOCUS:INK;
+        if(visual==DeviceVisual.XBOX&&!active)artworkInk=switch(control){
+            case "A"->new Color(0xa9d98a);case "B"->new Color(0xf28d89);
+            case "X"->new Color(0x83b8ed);case "Y"->new Color(0xedd181);default->INK;
+        };
+        if(UiArtwork.draw(artworkPath(control,visual),cx,cy,width(control,visual,height),height,fade(artworkInk,opacity)))return;
         int matrix=GL11.glGetInteger(GL11.GL_MATRIX_MODE);
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPushMatrix();
@@ -88,6 +91,107 @@ public final class ControlGlyphs {
             GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPopMatrix();GL11.glMatrixMode(matrix);GL11.glPopAttrib();
         }
     }
+    // BEGIN GENERATED ARTWORK MAPPING
+    public static String artworkPath(String control,DeviceVisual visual) {
+        if(!PromptRenderer.recognized(control))return null;
+        if(visual==null)visual=DeviceVisual.GENERIC;
+        String family=switch(visual){case XBOX->"xbox";case STEAM_DECK->"steam-deck";case ROG_ALLY->"rog-ally";default->"generic";};
+        return "graphics/sectorpad/controls/glyphs/"+family+"/"+control.toLowerCase(java.util.Locale.ROOT)+".png";
+    }
+    private static float artworkAspect(String control,DeviceVisual visual) {
+        if(visual==null)visual=DeviceVisual.GENERIC;
+        return switch(visual){
+            case XBOX -> switch(control){
+                case "A" -> 180f/180f;
+                case "B" -> 180f/180f;
+                case "X" -> 180f/180f;
+                case "Y" -> 180f/180f;
+                case "LB" -> 220f/132f;
+                case "RB" -> 220f/132f;
+                case "LT" -> 172f/178f;
+                case "RT" -> 172f/178f;
+                case "L3" -> 211f/165f;
+                case "R3" -> 211f/165f;
+                case "MENU" -> 180f/180f;
+                case "VIEW" -> 180f/180f;
+                case "LEFT_STICK" -> 188f/188f;
+                case "RIGHT_STICK" -> 188f/188f;
+                case "DPAD" -> 186f/186f;
+                case "DPAD_UP" -> 186f/186f;
+                case "DPAD_DOWN" -> 186f/186f;
+                case "DPAD_LEFT" -> 186f/186f;
+                case "DPAD_RIGHT" -> 186f/186f;
+                default -> 1f;
+            };
+            case STEAM_DECK -> switch(control){
+                case "A" -> 98f/98f;
+                case "B" -> 98f/98f;
+                case "X" -> 98f/98f;
+                case "Y" -> 98f/98f;
+                case "LB" -> 98f/98f;
+                case "RB" -> 98f/98f;
+                case "LT" -> 98f/98f;
+                case "RT" -> 98f/98f;
+                case "L3" -> 98f/106f;
+                case "R3" -> 98f/106f;
+                case "MENU" -> 82f/42f;
+                case "VIEW" -> 82f/42f;
+                case "LEFT_STICK" -> 98f/98f;
+                case "RIGHT_STICK" -> 98f/98f;
+                case "DPAD" -> 98f/98f;
+                case "DPAD_UP" -> 98f/98f;
+                case "DPAD_DOWN" -> 98f/98f;
+                case "DPAD_LEFT" -> 98f/98f;
+                case "DPAD_RIGHT" -> 98f/98f;
+                default -> 1f;
+            };
+            case ROG_ALLY -> switch(control){
+                case "A" -> 98f/98f;
+                case "B" -> 98f/98f;
+                case "X" -> 98f/98f;
+                case "Y" -> 98f/98f;
+                case "LB" -> 98f/66f;
+                case "RB" -> 98f/66f;
+                case "LT" -> 98f/90f;
+                case "RT" -> 98f/90f;
+                case "L3" -> 98f/106f;
+                case "R3" -> 98f/106f;
+                case "MENU" -> 98f/98f;
+                case "VIEW" -> 98f/98f;
+                case "LEFT_STICK" -> 98f/98f;
+                case "RIGHT_STICK" -> 98f/98f;
+                case "DPAD" -> 98f/98f;
+                case "DPAD_UP" -> 98f/98f;
+                case "DPAD_DOWN" -> 98f/98f;
+                case "DPAD_LEFT" -> 98f/98f;
+                case "DPAD_RIGHT" -> 98f/98f;
+                default -> 1f;
+            };
+            case GENERIC -> switch(control){
+                case "A" -> 98f/98f;
+                case "B" -> 98f/98f;
+                case "X" -> 98f/98f;
+                case "Y" -> 98f/98f;
+                case "LB" -> 98f/66f;
+                case "RB" -> 98f/66f;
+                case "LT" -> 98f/90f;
+                case "RT" -> 98f/90f;
+                case "L3" -> 98f/106f;
+                case "R3" -> 98f/106f;
+                case "MENU" -> 98f/98f;
+                case "VIEW" -> 98f/98f;
+                case "LEFT_STICK" -> 98f/98f;
+                case "RIGHT_STICK" -> 98f/98f;
+                case "DPAD" -> 98f/98f;
+                case "DPAD_UP" -> 98f/98f;
+                case "DPAD_DOWN" -> 98f/98f;
+                case "DPAD_LEFT" -> 98f/98f;
+                case "DPAD_RIGHT" -> 98f/98f;
+                default -> 1f;
+            };
+        };
+    }
+    // END GENERATED ARTWORK MAPPING
     private static Color fade(Color c,float opacity){return alpha(c,Math.round(c.getAlpha()*opacity));}
     private static void color(Color c){GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glColor4f(c.getRed()/255f,c.getGreen()/255f,c.getBlue()/255f,c.getAlpha()/255f);}
     private static void disc(float x,float y,float radius,Color c){
