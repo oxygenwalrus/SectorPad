@@ -119,7 +119,7 @@ def jar_tree(destination, source, prefix=''):
                 archive.writestr(info,p.read_bytes())
 
 
-PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md','REFIT_WORKSPACE.md','HUD_SKIN.md')
+PUBLIC_DOCS=('COMPATIBILITY.md','GAME_INTEGRATION.md','SETTINGS.md','LUNALIB_API_REVIEW.md','LIFECYCLE.md','HANDHELDS_AND_DIAGNOSTICS.md','REFIT_WORKSPACE.md','HUD_SKIN.md','UI_REFINEMENT.md')
 SOURCE_VENDOR=('jamepad-2.30.0.0.jar','jamepad-2.30.0.0-sources.jar','jamepad-2.30.0.0.pom','gdx-jnigen-loader-2.2.0.jar','gamecontrollerdb-commit.txt')
 NATIVE_PAYLOADS=('windows-x86_64/jamepad64.dll','linux-x86_64/libjamepad64.so','windows-x86_64/sectorpad-input-windows-x86_64.dll')
 
@@ -149,6 +149,10 @@ def package_source():
         shutil.copytree(ROOT/directory,target/directory)
     (target/'tools').mkdir()
     for path in sorted((ROOT/'tools').glob('*.py')):shutil.copy2(path,target/'tools'/path.name)
+    review_source=ROOT/'tools/ui-review/OffscreenUiReview.java'
+    if review_source.is_file():
+        (target/'tools/ui-review').mkdir()
+        shutil.copy2(review_source,target/'tools/ui-review'/review_source.name)
     for name in ('.gitignore','README.md','LICENSE','THIRD_PARTY_NOTICES.md','build.gradle','settings.gradle'):
         shutil.copy2(ROOT/name,target/name)
     copy_public_docs(target/'docs',design_history=True)

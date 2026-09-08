@@ -2,17 +2,17 @@ package sectorpad.ui;
 
 import java.awt.Color;
 
-/** Native-style tokens used only by SectorPad-owned drawing. */
+/** Instrument-panel palette shared by SectorPad drawing and its mod-loaded HUD skin. */
 public final class TripadTheme {
-    public static final Color INK = new Color(0xe5edf2);
-    public static final Color MUTED = new Color(0xa7bbc8);
-    public static final Color CYAN = new Color(0x6bdde7);
-    public static final Color FOCUS = new Color(0xffc878);
-    public static final Color STEEL = new Color(0x3a5366);
-    public static final Color PANEL = new Color(16,29,43,252);
-    public static final Color KEY = new Color(0x192e3d);
-    public static final Color SELECTED = new Color(0x254858);
-    public static final Color FIELD = new Color(9,18,29,252);
+    public static final Color INK = new Color(0xe6f0f4);
+    public static final Color MUTED = new Color(0xa1b8c8);
+    public static final Color CYAN = new Color(0x80ddeb);
+    public static final Color FOCUS = new Color(0xf6bf75);
+    public static final Color STEEL = new Color(0x355264);
+    public static final Color PANEL = new Color(12,24,36,252);
+    public static final Color KEY = new Color(0x142938);
+    public static final Color SELECTED = new Color(0x203e50);
+    public static final Color FIELD = new Color(7,15,25,252);
     public static final Color SHADOW = new Color(2,5,7,238);
     public static final Color DIM = new Color(5,12,20,154);
     private TripadTheme() { }

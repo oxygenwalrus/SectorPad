@@ -780,7 +780,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         String dialogTitle=confirmation!=null?"Confirm "+confirmation.label():quantities.isActive()?"Selecting cargo quantity":null;
         String dialogBody=confirmation!=null?confirmation.description():quantities.isActive()?quantities.status():"";
         String footer=prompt("UI","ui.confirm")+" Confirm   "+prompt("UI","ui.cancel")+" Cancel   "+prompt("UI","ui.nextTab")+" Next page";
-        if(keyboard.isOpen())footer=prompt("UI","ui.confirm")+" Type   "+prompt("UI","ui.secondary")+" Erase   "+prompt("UI","ui.actions")+" Shift   "+prompt("UI","ui.previousTab")+"/"+prompt("UI","ui.nextTab")+" Caret   "+prompt("UI","game.menu")+" Accept   "+prompt("UI","ui.cancel")+" Cancel";
+        if(keyboard.isOpen())footer=prompt("UI","ui.confirm")+" Type   "+prompt("UI","ui.secondary")+" Erase   "+prompt("UI","ui.actions")+" Shift   "+prompt("UI","ui.previousTab")+"/"+prompt("UI","ui.nextTab")+" Caret   "+prompt("UI","game.menu")+" Apply   "+prompt("UI","ui.cancel")+" Cancel";
         if(!hasModal())footer=mainMenuShortcutsAvailable()?"X Setup   Y Mod settings   R3 Keyboard   "+prompt("UI","hub.open")+" Hub":prompt(context.name(),"hub.open")+" Command hub   View + Menu (hold) Recovery";
         if(requireReconnectAck&&raw.connected())footer="Release controls, then A to reconnect. Keyboard and mouse remain available.";
         if(settings.isPreviewing()&&remapPanel==null)footer="Preview: "+(int)Math.ceil(settings.previewSecondsRemaining())+"s   Menu Keep   View Revert";

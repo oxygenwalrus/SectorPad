@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.2.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.3.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. Earlier tests detected a connected XInput controller in both the standalone probe and isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -62,6 +62,14 @@ Controller Setup now includes a bounded ten-second test that observes SDL and XI
 SectorPad-owned setup, refit, radial and keyboard panels now recognize mouse-compatible touchscreen interaction. Activation occurs on release, drags scroll without activating rows, radial drags commit on release, and long press provides a bounded secondary gesture. Core gesture tests cover slop, release-only movement, scroll steps, cancellation and ownership loss. This is not raw multi-touch support; physical Ally/Deck touch acceptance remains pending.
 
 Optional combat gyro aim integrates mouse deltas emitted by Steam Input into the last right-stick direction. Combat aim consumes those mouse events only while its activation is held; Aim + pointer retains their normal pointer delivery. It has Luna controls for mode, activation, sensitivity, smoothing and inversion, and it requires a connected gamepad before consuming deltas. Core tests cover idle ownership, stick handoff, bounded integration, invalid deltas, recentering and inversion. XInput has no motion channel, and no direct SDL sensor API is exposed through the installed Jamepad bridge, so this version relies on the Steam Input mouse path. Physical gyro tuning and screen-orientation acceptance remain pending.
+
+## 1.3.0 refined instrument-panel UI
+
+The native frame skin and SectorPad-owned interfaces now share deeper navy recesses, pale cyan accents, amber selection and clipped inset surfaces. The radial has a separated outer rim, quieter unavailable entries and distinct action symbols. Refit has a section rail, ruled equipment list, a framed ship schematic with focused mount markers, clearer OP allocation and aligned statistics. Keyboard action keys are visually separated from character keys; Apply describes the existing text commit operation. Controller Setup uses the same vector control surfaces with distinct hover and selection, respecting its host's opacity. Native cursors and input handlers retain their existing implementations.
+
+All 57 allowlisted native textures retain their original dimensions, transparency gutters and repeatable seams. A generated specimen sheet was inspected. The new offscreen harness renders the current OverlayRenderer and RefitWorkspace through a real LWJGL OpenGL context with LazyFont and read-only installed font/sprite resources. Its fixture data is synthetic. Checks cover actual keyboard/radial hit correspondence, refit target bounds, GL errors and restoration of matrix, texture, blend and other drawing state at 1280×720, 1280×800 and 1920×1080, with scale 1.0 and 1.8. Shared control surfaces also have a visual specimen for hover, selection and opacity. These artifacts are not screenshots from a live game or a full LunaLib integration test. See [design and preview evidence](UI_REFINEMENT.md).
+
+The full build and existing behavior suites pass. The 32 protected original installation/dependency hashes remain unchanged. This turn launched no game window and modified no installed base-game content. Live integration of the refined theme, mixed-mod palette loading, native Luna mounting, handheld readability and physical touch/controller input remain device acceptance work.
 
 ## Input ownership
 

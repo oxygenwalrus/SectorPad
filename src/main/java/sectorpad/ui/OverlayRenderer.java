@@ -80,7 +80,7 @@ public final class OverlayRenderer {
     private void drawPointer(float width,float height,float scale,Pointer value){
         if(value.x()<0||value.x()>width||value.y()<0||value.y()>height)return;
         float s=Math.min(scale,Math.min(width,height)/200f),x=value.x()-10*s,y=value.y()-34*s,w=40*s,h=44*s;
-        brackets(x,y,w,h,10*s,SHADOW,5*s);brackets(x,y,w,h,10*s,CYAN,2*s);
+        brackets(x,y,w,h,8*s,SHADOW,4*s);brackets(x,y,w,h,8*s,CYAN,1.5f*s);
         if(value.precision()){
             float cx=x+w/2,cy=y+h/2;
             float[] m={x-7*s,cy,x-2*s,cy,x+w+2*s,cy,x+w+7*s,cy,cx,y-7*s,cx,y-2*s,cx,y+h+2*s,cx,y+h+7*s};
@@ -102,7 +102,9 @@ public final class OverlayRenderer {
         if(v==null)return;
         float s=Math.min(scale,Math.min(width,height)/250f),out=3*s,x=Math.max(1,v.x()-out),y=Math.max(1,v.y()-out);
         float w=Math.min(width-1,v.right()+out)-x,h=Math.min(height-1,v.top()+out)-y,leg=Math.min(14*s,Math.min(w,h)*.3f);
-        brackets(x,y,w,h,leg,SHADOW,6*s);brackets(x,y,w,h,leg,FOCUS,2*s);
+        brackets(x,y,w,h,leg,SHADOW,5*s);brackets(x,y,w,h,leg,FOCUS,1.5f*s);
+        // The native control stays unobscured; only its outside edge receives a focus rail.
+        if(y>=3*s)segments(new float[]{x+leg,y-1*s,x+w-leg,y-1*s},alpha(FOCUS,95),1);
         if(x>=10*s)triangle(x-9*s,y+h/2-6*s,x-3*s,y+h/2,x-9*s,y+h/2+6*s,FOCUS);
         if(value.multiSelect()&&x+w+20*s<width){
             float cx=x+w+12*s,cy=y+h/2;float[] m={cx-4*s,cy,cx+4*s,cy,cx,cy-4*s,cx,cy+4*s};
@@ -120,6 +122,10 @@ public final class OverlayRenderer {
         }
         float r=17*s,gap=7*s;float[] m={x-r,y,x-gap,y,x+gap,y,x+r,y,x,y-r,x,y-gap,x,y+gap,x,y+r};
         segments(m,SHADOW,5*s);segments(m,ink,2*s);
+        if(aim.locked()||aim.precision())for(int quadrant=0;quadrant<4;quadrant++){
+            TripadDrawing.arc(x,y,23*s,quadrant*90+27,quadrant*90+63,SHADOW,4*s);
+            TripadDrawing.arc(x,y,23*s,quadrant*90+27,quadrant*90+63,alpha(ink,180),1*s);
+        }
         if(aim.precision()){
             brackets(x-11*s,y-11*s,22*s,22*s,4*s,SHADOW,4*s);brackets(x-11*s,y-11*s,22*s,22*s,4*s,ink,1.5f*s);
             circle(x,y,2.5f*s,SHADOW);circle(x,y,1.25f*s,INK);
@@ -138,31 +144,42 @@ public final class OverlayRenderer {
         wheelLayout=OverlayLayout.wheel(width,height,scale);
         float cx=wheelLayout.x(),cy=wheelLayout.y(),r=wheelLayout.radius(),inner=wheelLayout.inner(),s=wheelLayout.scale();
         rect(0,0,width,height,DIM);List<RadialModel.Entry> entries=wheel.visible();
-        ring(cx,cy,r+7*s,alpha(STEEL,160),1);
+        circle(cx,cy,r+10*s,alpha(SHADOW,145));
+        // Segmented external rim gives the wheel a floating instrument silhouette.
+        for(int quadrant=0;quadrant<4;quadrant++)
+            TripadDrawing.arc(cx,cy,r+8*s,quadrant*90+7,quadrant*90+83,alpha(STEEL,155),1);
         for(int i=0;i<wheel.slots();i++){
             boolean chosen=i==wheel.selected(),exists=i<entries.size(),enabled=exists&&entries.get(i).enabled();
-            sector(cx,cy,inner+4*s,r,i,wheel.slots(),chosen?SELECTED:exists?PANEL:alpha(FIELD,100));
-            sectorOutline(cx,cy,inner+4*s,r,i,wheel.slots(),chosen?alpha(FOCUS,120):alpha(STEEL,exists?150:40),Math.max(1,s));
-            if(exists)sector(cx,cy,r-3*s,r,i,wheel.slots(),chosen?FOCUS:alpha(CYAN,enabled?100:35));
+            if(exists){
+                sector(cx,cy,inner+6*s,r-6*s,i,wheel.slots(),chosen?SELECTED:enabled?PANEL:alpha(FIELD,205));
+                sectorOutline(cx,cy,inner+6*s,r-6*s,i,wheel.slots(),chosen?alpha(FOCUS,110):alpha(STEEL,enabled?110:50),1);
+                sector(cx,cy,r-2*s,r,i,wheel.slots(),chosen?FOCUS:alpha(CYAN,enabled?75:20));
+                if(chosen)sector(cx,cy,r-10*s,r-6*s,i,wheel.slots(),alpha(FOCUS,27));
+            }
             double theta=(double)i/wheel.slots()*Math.PI*2;float sx=(float)Math.sin(theta),sy=(float)Math.cos(theta);
             if(chosen){
-                float tx=cx+sx*(r-8*s),ty=cy+sy*(r-8*s),px=sy*5*s,py=-sx*5*s;
-                triangle(tx+px,ty+py,tx-px,ty-py,cx+sx*(r-18*s),cy+sy*(r-18*s),FOCUS);
+                float tx=cx+sx*(inner+9*s),ty=cy+sy*(inner+9*s),px=sy*4*s,py=-sx*4*s;
+                triangle(tx+px,ty+py,tx-px,ty-py,cx+sx*(inner+16*s),cy+sy*(inner+16*s),FOCUS);
             }
             if(exists){
                 float tx=cx+sx*r*.73f,ty=cy+sy*r*.73f;
-                TripadDrawing.glyph(entries.get(i).id(),tx,ty+20*s,10*s,enabled?(chosen?FOCUS:CYAN):STEEL);
+                TripadDrawing.glyph(entries.get(i).id(),tx,ty+23*s,11*s,enabled?(chosen?FOCUS:CYAN):STEEL);
                 text(entries.get(i).label(),tx,ty+2*s,17*s,enabled?INK:MUTED,r*.64f,43*s,true);
                 if(!enabled)text("Unavailable",tx,ty-37*s,12*s,MUTED,r*.65f,16*s,true);
             }
         }
-        circle(cx,cy,inner-3*s,FIELD);ring(cx,cy,inner-3*s,alpha(STEEL,180),Math.max(1,s));
+        circle(cx,cy,inner-2*s,PANEL);ring(cx,cy,inner-2*s,alpha(STEEL,170),1);
+        circle(cx,cy,inner-7*s,FIELD);
+        TripadDrawing.arc(cx,cy,inner-7*s,25,155,alpha(CYAN,100),1);
+        TripadDrawing.arc(cx,cy,inner-7*s,205,335,alpha(STEEL,150),1);
         RadialModel.Entry selected=wheel.highlighted();
         TripadDrawing.glyph(selected==null?"hub":selected.id(),cx,cy+40*s,13*s,selected==null?CYAN:FOCUS);
         text(selected==null?"Choose an action":selected.label(),cx,cy+13*s,20*s,INK,inner*1.72f,47*s,true);
-        text(selected==null?"Centre cancels":selected.enabled()?"Ready":"Unavailable",cx,cy-42*s,14*s,MUTED,inner*1.74f,26*s,true);
+        text(selected==null?"Centre cancels":selected.enabled()?"Selected":"Unavailable",cx,cy-42*s,14*s,selected==null||!selected.enabled()?MUTED:FOCUS,inner*1.74f,26*s,true);
         text(wheel.title(),cx,wheelLayout.titleY(),28*s,INK,width-48,37*s,true);
         text("Page "+(wheel.page()+1)+" of "+wheel.pages(),cx,wheelLayout.pageY(),15*s,MUTED,width-48,21*s,true);
+        float pageSpan=(wheel.pages()-1)*12*s;
+        for(int page=0;page<wheel.pages();page++)rect(cx-pageSpan/2+page*12*s-3*s,wheelLayout.pageY()-22*s,6*s,2*s,page==wheel.page()?CYAN:STEEL);
         String description=selected==null?"Right stick or D-pad to choose":!selected.enabled()&&selected.reason()!=null&&!selected.reason().isBlank()?selected.reason():selected.description();
         text(description,cx,wheelLayout.descriptionY(),17*s,INK,Math.min(width-48,770*s),41*s,true);
         float footW=Math.min(width-40*s,920*s);
@@ -174,13 +191,17 @@ public final class OverlayRenderer {
         OverlayLayout.Rect p=keyboardLayout.panel(),field=keyboardLayout.field();float s=keyboardLayout.scale();if(!p.valid())return;
         if(!keyboard.docked())rect(0,0,width,height,alpha(DIM,174));panelFrame(p.x(),p.y(),p.width(),p.height(),s);
         text(keyboard.title(),p.x()+22*s,keyboardLayout.titleY(),24*s,INK,p.width()-44*s,30*s,false);
-        rect(field.x(),field.y(),field.width(),field.height(),FIELD);outline(field.x(),field.y(),field.width(),field.height(),STEEL,Math.max(1,s));
+        TripadDrawing.plate(field.x(),field.y(),field.width(),field.height(),5*s,FIELD,STEEL);
+        segments(new float[]{field.x()+8*s,field.y()+1*s,field.right()-8*s,field.y()+1*s},alpha(CYAN,80),1);
         int capacity=Math.max(12,(int)((field.width()-28*s)/(12*s)));
         text(keyboard.visibleText(capacity),field.x()+13*s,field.top()-7*s,24*s,INK,field.width()-26*s,30*s,false);
         for(OverlayLayout.Key key:keyboardLayout.keys()){
             OverlayLayout.Rect r=key.bounds();boolean chosen=keyboard.row()==key.row()&&keyboard.column()==key.column();
-            TripadDrawing.control(r.x(),r.y(),r.width(),r.height(),s,chosen);
-            String label=key.row()==rows.length?new String[]{"Space","Erase","Shift","Accept","Cancel"}[key.column()]:String.valueOf(rows[key.row()].charAt(key.column()));
+            boolean action=key.row()==rows.length;
+            if(action&&!chosen)TripadDrawing.plate(r.x(),r.y(),r.width(),r.height(),6*s,FIELD,alpha(STEEL,125));
+            else TripadDrawing.control(r.x(),r.y(),r.width(),r.height(),s,chosen);
+            if(action&&key.column()==3&&!chosen)segments(new float[]{r.x()+7*s,r.y()+1*s,r.right()-7*s,r.y()+1*s},alpha(CYAN,145),1);
+            String label=action?new String[]{"Space","Erase","Shift","Apply","Cancel"}[key.column()]:String.valueOf(rows[key.row()].charAt(key.column()));
             if(label.equals(" ")){
                 float cx=r.x()+r.width()/2,cy=r.y()+r.height()/2;
                 segments(new float[]{cx-5*s,cy+3*s,cx-5*s,cy-3*s,cx-5*s,cy-3*s,cx+5*s,cy-3*s,cx+5*s,cy-3*s,cx+5*s,cy+3*s},INK,2*s);

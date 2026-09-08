@@ -10,6 +10,8 @@ import com.fs.starfarer.api.util.Misc;
 import lunalib.lunaUI.elements.LunaElement;
 import lunalib.lunaUI.panel.LunaBaseCustomPanelPlugin;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+import sectorpad.ui.TripadDrawing;
 import sectorpad.core.PadFrame;
 import sectorpad.core.TouchGesture;
 import java.awt.Color;
@@ -484,17 +486,25 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     private static String shorten(String value, int limit) { return value.length() <= limit ? value : value.substring(0, limit - 1) + "…"; }
     private void button(TooltipMakerAPI ui, String text, float x, float y, float width, float height, boolean selected, Runnable action) {
         LunaElement element = new LunaElement(ui, width, height) {
+            @Override public void renderBelow(float alphaMult) {
+                super.renderBelow(alphaMult);
+                if(alphaMult<=0)return;
+                var p=getPosition();GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+                try{
+                    GL11.glDisable(GL11.GL_CULL_FACE);GL11.glDisable(GL11.GL_DEPTH_TEST);
+                    GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
+                    TripadDrawing.control(p.getX(),p.getY(),p.getWidth(),p.getHeight(),1,selected,isHovering(),alphaMult);
+                }finally{GL11.glPopAttrib();}
+            }
             @Override public void onClick(InputEventAPI event) {
                 // LunaElement dispatches even consumed events and all mouse buttons.
                 if (closed || event.isConsumed() || !event.isLMBDownEvent() || event.isDoubleClick()) return;
                 event.consume(); playClickSound(); action.run();
             }
-            @Override public void onHoverEnter(InputEventAPI event) { setBorderColor(FOCUS); }
-            @Override public void onHoverExit(InputEventAPI event) { setBorderColor(selected ? FOCUS : KEY); }
         };
         element.getPosition().inTL(x, y); element.setSelectionGroup("sectorpad.setup");
         clickTargets.add(new ClickTarget(element, action));
-        element.setBorderColor(selected ? FOCUS : KEY);
+        element.setRenderBackground(false);element.setRenderBorder(false);
         element.addText(text, selected ? FOCUS : INK, FOCUS, List.of()); element.centerText();
     }
     private static final class ControllerDiagram extends LunaElement {
@@ -518,6 +528,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         private void tile(String name, float x, float y, float width, float height) {
             LunaElement tile = new LunaElement(getInnerElement(), width, height * verticalScale); tile.getPosition().inTL(x, y * verticalScale);
             String label = name.replace("DPAD_", "").replace("LEFT", "<").replace("RIGHT", ">").replace("UP", "^").replace("DOWN", "v");
+            tile.setBackgroundColor(FIELD);tile.setBorderColor(STEEL);
             tile.addText(label, INK, FOCUS, List.of()); tile.centerText(); controls.put(name, tile);
         }
         private LunaElement analog(String name, float x, float y, float width, float height) {
@@ -525,7 +536,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
             tile.addText(name, INK, FOCUS, List.of()); tile.centerText(); return tile;
         }
         void update(InputState state) {
-            controls.forEach((control, tile) -> { boolean held = state.rawButtons.contains(control); tile.setBackgroundColor(held ? FOCUS.darker() : KEY.darker()); tile.setBorderColor(held ? FOCUS : KEY); });
+            controls.forEach((control, tile) -> { boolean held = state.rawButtons.contains(control); tile.setBackgroundColor(held ? SELECTED : FIELD); tile.setBorderColor(held ? FOCUS : STEEL); });
             leftStick.changeText(String.format(Locale.ROOT, "Raw L %+.2f %+.2f", state.rawLeftX, state.rawLeftY), List.of()); leftStick.centerText();
             rightStick.changeText(String.format(Locale.ROOT, "Raw R %+.2f %+.2f", state.rawRightX, state.rawRightY), List.of()); rightStick.centerText();
         }

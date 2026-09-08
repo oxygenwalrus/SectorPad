@@ -1,6 +1,8 @@
 # Native HUD frame skin
 
-SectorPad includes 57 original textures for native panel, frame, decorative chassis and tab surfaces. The design uses matte blue-grey surfaces, quiet steel edges, clipped corners and short cyan light strips. Native text, icons, gauges, hover states and interactions continue to be drawn and handled by Starsector.
+SectorPad includes 57 original textures for native panel, frame, decorative chassis and tab surfaces. The refined design combines Starsector's compact industrial instruments with the clean depth and restrained lighting of modern science-fiction interfaces. Dark navy recesses separate matte control surfaces from thin steel shells; clipped corners and short, subdued cyan edge lights give the chassis a consistent construction. Native text, icons, gauges, hover states and interactions continue to be drawn and handled by Starsector.
+
+The visual reference is the readable instrumentation of Star Citizen and Mass Effect, interpreted as original geometry for Starsector's existing layouts. There are no copied franchise assets, decorative text, animated scanlines or baked selection states. A dark gap between shell and inner rail gives panels depth without gradients or visual noise. Bottom-menu light strips sit at the shared housing ends; individual controls stay neutral until the native game draws their state.
 
 This skin intentionally supplies art at selected standard native texture paths through normal mod resource loading. It does not change files in the installed game or another mod. Texture selection occurs when the game loads its resources; the native skin applies while SectorPad is enabled, including keyboard/mouse use. It is not swapped dynamically when the last input device changes.
 
@@ -33,17 +35,17 @@ The palette is shared with SectorPad's owned overlays:
 
 | Token | Color | Role |
 | --- | --- | --- |
-| Panel | `#101d2b` | Main matte surface |
-| Field | `#09121d` | Recessed field/background |
-| Key | `#192e3d` | Control surface |
-| Selected | `#254858` | Raised or selected surface |
-| Cyan | `#6bdde7` | Short light strips and active accents |
-| Focus | `#ffc878` | Controller focus accent in owned overlays |
-| Ink | `#e5edf2` | Primary foreground |
-| Muted | `#a7bbc8` | Secondary foreground |
-| Steel | `#3a5366` | Structural edges |
+| Panel | `#0c1824` | Main matte surface |
+| Field | `#070f19` | Recessed field/background |
+| Key | `#142938` | Control surface |
+| Selected | `#203e50` | Raised or selected surface |
+| Cyan | `#80ddeb` | Runtime accents; blended with steel for static edge lighting |
+| Focus | `#f6bf75` | Controller focus accent in owned overlays |
+| Ink | `#e6f0f4` | Primary foreground |
+| Muted | `#a1b8c8` | Secondary foreground |
+| Steel | `#355264` | Structural edges |
 
-Static frames use the restrained surface/steel/cyan subset. The game and SectorPad's runtime own dynamic text and focus colors; the textures do not bake text or permanently paint an active focus state.
+Static frames use the restrained surface/steel/cyan subset. Their edge light blends 30% cyan into steel, reserving the full accent intensity for runtime controls. The game and SectorPad's runtime own dynamic text and focus colors; the textures do not bake text or permanently paint an active focus state.
 
 ## Preserved surfaces
 
@@ -58,19 +60,19 @@ python tools/generate-hud-theme.py
 python tools/generate-hud-theme.py --check
 ```
 
-The first command writes only the 57 allowlisted PNGs under `mod/graphics`. The second compares every checked-in PNG byte-for-byte with freshly generated geometry and makes no changes. PNG encoding uses fixed uncompressed DEFLATE blocks to avoid compression-version differences. Both commands check the opaque versus transparent center contracts, exterior padding, a panel seam, clear side-extension regions, the power-button aperture and the decorative chassis cutouts. An optional assembled preview can be written separately:
+The first command writes only the 57 allowlisted PNGs under `mod/graphics`. The second compares every checked-in PNG byte-for-byte with freshly generated geometry and makes no changes. PNG encoding uses fixed uncompressed DEFLATE blocks to avoid compression-version differences. Both commands check all sprite dimensions, the opaque versus transparent center contracts, exterior padding, panel joins, repeatable horizontal and vertical edge seams, clear side-extension regions, the power-button aperture and the decorative chassis cutouts. An optional assembled preview can be written separately:
 
 ```text
-python tools/generate-hud-theme.py --check --preview build/hud-theme-preview.png
+python tools/generate-hud-theme.py --check --preview build/modern-hud-preview.png
 ```
 
 The generated set occupies 320,808 bytes. Its deterministic manifest digest, computed over sorted relative names and encoded PNG bytes, is:
 
 ```text
-7469324a687b4b0db2cb4242aad6a751c9bc37fecd4eec5747215d9e19b052de
+e117236ad9fb7fba0f7aaae6102e6e93da3d4e0c5e41c03a5fdafc016e716598
 ```
 
-All 57 PNGs were independently decoded and checked against the installed Starsector 0.98a-RC8 asset dimensions. The assembled panel, tab-chassis, decorative corner/rail and backing-field preview was visually inspected. These checks establish texture integrity and basic composition; they do not establish that every native screen, scaling factor or third-party UI combination has been visually accepted. See the main compatibility report for recorded live checks.
+All 57 PNGs were independently decoded and checked against the installed Starsector 0.98a-RC8 asset dimensions in the original compatibility pass; this refinement preserves those dimensions and adds them to the generator's checks. The refined assembled panel, tab-chassis, decorative corner/rail, repeated-edge control and backing-field preview was visually inspected. It is a geometry specimen sheet, not a game screenshot. These checks establish texture integrity and basic composition; they do not establish that every native screen, scaling factor or third-party UI combination has been visually accepted. This refinement has not had a new live in-game visual pass. See the main compatibility report for recorded earlier live checks.
 
 ## Other native skins
 

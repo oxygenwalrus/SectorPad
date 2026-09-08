@@ -2,7 +2,7 @@
   "id": "sectorpad",
   "name": "SectorPad",
   "author": "SectorPad contributors",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Xbox and Steam Deck-style controls, touch-safe panels, optional gyro aim, a modern TriPad HUD skin, refit workspace, radial menus, text entry, and LunaLib remapping.",
   "gameVersion": "0.98a-RC8",
   "utility": true,
