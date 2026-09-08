@@ -11,6 +11,7 @@ import lunalib.lunaUI.elements.LunaElement;
 import lunalib.lunaUI.panel.LunaBaseCustomPanelPlugin;
 import org.lwjgl.input.Keyboard;
 import sectorpad.core.PadFrame;
+import sectorpad.core.TouchGesture;
 import java.awt.Color;
 import static sectorpad.ui.TripadTheme.*;
 import java.util.ArrayList;
@@ -89,6 +90,8 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     private List<String> wheelDraft = new ArrayList<>();
     private boolean wheelMoving, wheelReset;
     private final List<ClickTarget> clickTargets = new ArrayList<>();
+    private final TouchGesture touch = new TouchGesture();
+    private ClickTarget touchTarget;
     private record ClickTarget(LunaElement element, Runnable action) { }
     private CustomPanelAPI contentPanel;
     private LabelAPI statusLabel, liveLabel, deviceLabel;
@@ -112,7 +115,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     public void cancelCapture(String reason) { capture.cancel(reason); service.report(reason); }
     public void closePanel() { if (isOpenedFromScript()) onClose(); else close(); }
     @Override public void onClose() {
-        if (closed) return; closed = true;
+        if (closed) return; closed = true; touch.cancel(); touchTarget = null;
         capture.cancel("Controller Setup closed.");
         if (service.isPreviewing()) service.revert("Controller Setup closed. Previous controls restored.");
         closeOwnPanel.run();
@@ -245,17 +248,33 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
                 event.consume();
             } else if (event.isKeyUpEvent()) event.consume();
             else if (event.isMouseScrollEvent()) { if (event.getEventValue() != 0) select(event.getEventValue() > 0 ? -1 : 1); event.consume(); }
-            else if (event.isMouseDownEvent()) {
+            else if (event.isLMBDownEvent() && !event.isDoubleClick()) {
                 // The pre-core host dispatches our buttons before vanilla root panels can
                 // consume clicks. These are the actual Luna elements' public positions.
-                if (!dirty && event.isLMBDownEvent() && !event.isDoubleClick()) {
+                touch.cancel(); touchTarget = null;
+                if (!dirty) {
                     for (ClickTarget target : List.copyOf(clickTargets)) {
                         if (target.element.getPosition().containsEvent(event)) {
-                            event.consume(); target.element.playClickSound(); target.action.run(); break;
+                            touchTarget = target; touch.begin(event.getX(), event.getY(), System.nanoTime()); break;
                         }
                     }
                 }
                 event.consume();
+            } else if (event.isMouseMoveEvent() && touch.active()) {
+                TouchGesture.Update update = touch.move(event.getX(), event.getY());
+                if (update.scrollSteps() != 0) select(-update.scrollSteps());
+                event.consume();
+            } else if (event.isLMBUpEvent()) {
+                TouchGesture.Update update = touch.end(event.getX(), event.getY(), System.nanoTime());
+                ClickTarget target = touchTarget; touchTarget = null;
+                if (update.scrollSteps() != 0) select(-update.scrollSteps());
+                if (update.result() == TouchGesture.Result.TAP && target != null && !dirty
+                        && target.element.getPosition().containsEvent(event)) {
+                    target.element.playClickSound(); target.action.run();
+                }
+                event.consume();
+            } else if (event.isMouseDownEvent()) {
+                touch.cancel(); touchTarget = null; event.consume();
             } else if (event.isMouseEvent()) {
                 event.consume();
             }
@@ -280,6 +299,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     private List<SetupTool> tools() {
         List<SetupTool> tools = new ArrayList<>();
         tools.add(new SetupTool("Reconnect controller", this::reconnectController));
+        tools.add(new SetupTool("Run 10-second controller discovery test", service::testControllerDiscovery));
         tools.add(new SetupTool("Export diagnostic report", () -> service.report(sectorpad.diagnostics.Diagnostics.exportReport())));
         tools.add(new SetupTool("Save Luna calibration for this controller", () -> service.applyLunaCalibrationToDevice()));
         tools.add(new SetupTool("Restore standard controls", () -> { capture.reset(); draft = BindingProfile.defaults(); service.preview(draft); }));
@@ -340,6 +360,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     }
     private void rebuild() {
         dirty = false;
+        touch.cancel(); touchTarget = null;
         clickTargets.clear();
         if (contentPanel != null) getPanel().removeComponent(contentPanel);
         float width = getPanel().getPosition().getWidth() - 24f, height = getPanel().getPosition().getHeight() - 20f;
@@ -359,7 +380,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         LunaElement info = new LunaElement(ui, infoWidth, diagramHeight); info.getPosition().inTL(infoX, 62); info.setRenderBackground(false); info.setRenderBorder(false);
         deviceLabel = info.getInnerElement().addPara("Controller", 0);
         info.getInnerElement().addPara("Profile: " + draft.displayName + (compact ? "\nA / Enter: choose   Y: preview\nArrows: select / context   P: sections" : "\nD-pad / up-down: select\nLB-RB / left-right: context\nA / Enter: choose   X: unassign\nY: preview   View / P: sections"), 5f);
-        info.getInnerElement().addPara("Recovery: hold View + Menu for 2 seconds.", 7f, FOCUS);
+        info.getInnerElement().addPara("Recovery: hold View + Menu for 2 seconds. Touch: tap on release; drag lists.", 7f, FOCUS);
         liveLabel = ui.addPara("Live input", 0); liveLabel.getPosition().inTL(0, diagramHeight + 69);
         statusLabel = ui.addPara("", 0); statusLabel.getPosition().inTL(0, diagramHeight + 92);
         float listTop = compact ? 240 : 280, rowHeight = 29f;
@@ -451,7 +472,8 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     }
     private void updateLive() {
         if (diagram == null) return; diagram.update(latest);
-        deviceLabel.setText(shorten(latest.connected ? latest.deviceName : service.controllerStatus(), 65) + (latest.focused ? "" : " — focus lost"));
+        String device=latest.connected?latest.deviceName+" · "+service.controllerStatus():service.controllerStatus();
+        deviceLabel.setText(shorten(device, 82) + (latest.focused ? "" : " — focus lost"));
         BindingProfile shown = service.isPreviewing() ? service.activeProfile() : draft;
         List<String> matches = new ArrayList<>();
         shown.bindings(context()).forEach((action, control) -> { if (latest.buttons.contains(control)) matches.add(BindingProfile.actionLabel(action)); });

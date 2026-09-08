@@ -83,6 +83,14 @@ public final class SettingsTests {
         check(ControllerSettings.from(values).controllerBackend.equals("XInput"), "Wine compatibility backend persists in Luna settings");
         values.strings.put("sp_controller_backend", "bad");
         check(ControllerSettings.from(values).controllerBackend.equals("Automatic"), "Unknown backend values safely default");
+        values.strings.put("sp_gyro_mode", "Aim + pointer"); values.strings.put("sp_gyro_activation", "Always");
+        values.numbers.put("sp_gyro_sensitivity", .02); values.numbers.put("sp_gyro_smoothing", .7);
+        ControllerSettings gyro=ControllerSettings.from(values);
+        check(gyro.gyroMode.equals("Aim + pointer")&&gyro.gyroActivation.equals("Always"), "Gyro mode and activation are validated");
+        check(Math.abs(gyro.gyroSensitivity-.02f)<.0001f&&Math.abs(gyro.gyroSmoothing-.7f)<.0001f, "Gyro response tuning is bounded");
+        values.strings.put("sp_gyro_mode", "invalid"); values.strings.put("sp_gyro_activation", "invalid");
+        ControllerSettings invalidGyro=ControllerSettings.from(values);
+        check(invalidGyro.gyroMode.equals("Off")&&invalidGyro.gyroActivation.equals("Hold LT"), "Invalid gyro choices fail closed");
         check(settings.pointerSpeed == 900 && settings.pointerGamma == 3, "Nonfinite tuning defaults and ranges clamp");
         check(settings.triggerRelease <= settings.triggerPress - .049f, "Trigger hysteresis is always maintained");
         check(settings.controllerIndex == 7 && settings.glyphStyle.equals("Automatic") && settings.wheelSlots == 8, "Unsupported selectors fall back safely");
@@ -192,13 +200,16 @@ public final class SettingsTests {
         check(barriers[0] >= 8, "Every effective mapping transition notifies the release/rearm owner");
         service.preview(BindingProfile.southpaw()); service.setDevice("xbox-controller");
         check(!service.isPreviewing(), "Device replacement cancels active preview");
-        int[] reconnects={0};
+        int[] reconnects={0},discoveryTests={0};
         service.setListener(new SettingsService.Listener(){
             public void changed(ControllerSettings prefs,BindingProfile profile){barriers[0]++;}
             public void reconnectController(){check(!service.isPreviewing(), "Reconnect rolls back previews before resetting device");reconnects[0]++;}
+            public void testControllerDiscovery(){check(!service.isPreviewing(), "Discovery test rolls back previews before observing devices");discoveryTests[0]++;}
         });
         service.preview(BindingProfile.southpaw()); service.reconnectController();
         check(reconnects[0]==1 && service.activeProfile().equals(change), "Manual discovery restart preserves committed mappings");
+        service.preview(BindingProfile.southpaw()); service.testControllerDiscovery();
+        check(discoveryTests[0]==1 && service.activeProfile().equals(change), "Discovery test preserves committed mappings");
         service.preview(BindingProfile.southpaw()); service.close(); check(!service.isPreviewing(), "Shutdown cancels uncommitted mapping");
         SettingsService brokenClose = new SettingsService(new ProfileStore(Files.createTempDirectory("sectorpad-close-test-")), new MutableSource(), () -> time[0]);
         brokenClose.initialize(); brokenClose.preview(BindingProfile.southpaw());

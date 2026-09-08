@@ -19,6 +19,12 @@ public final class ControllerBackend implements AutoCloseable {
     private int index=-1;
     private boolean reconnect;
     private String status="Waiting for controller discovery";
+    private static final long TEST_NANOS=10_000_000_000L;
+    private long testStarted;
+    private boolean testRunning;
+    private PadFrame testSdl=PadFrame.disconnected(),testXinput=PadFrame.disconnected();
+    private boolean testSdlActivity,testXinputActivity;
+    private String lastDiscoveryResult="";
 
     public ControllerBackend(){
         SdlBackend sd=new SdlBackend(); WindowsXInputBackend xi=new WindowsXInputBackend();
@@ -46,6 +52,11 @@ public final class ControllerBackend implements AutoCloseable {
         if(!mode.equals(valid)||index!=slot){mode=valid;index=slot;requestReconnect();}
     }
     public void requestReconnect(){reconnect=true;}
+    public void startDiscoveryTest(long now){
+        requestReconnect();testStarted=now;testRunning=true;
+        testSdl=testXinput=PadFrame.disconnected();testSdlActivity=testXinputActivity=false;
+        Diagnostics.event("backend.discovery_test_started");
+    }
     public PadFrame poll(long now){
         if(reconnect){
             reconnect=false;active=null;sdl.reconnect();xinput.reconnect();
@@ -74,8 +85,35 @@ public final class ControllerBackend implements AutoCloseable {
         if(frame.connected()){active=first;status=first.status();}
         else active=null;
         Diagnostics.state("active_backend",frame.connected()?(first==sdl?"sdl":"xinput"):"none");
+        long testElapsed=now-testStarted;
+        if(testRunning&&testElapsed<TEST_NANOS){
+            PadFrame observedSdl=first==sdl?frame:sdl.poll(now,-1);
+            PadFrame observedXinput=windows?(first==xinput?frame:xinput.poll(now,-1)):PadFrame.disconnected();
+            testSdlActivity|=changed(testSdl,observedSdl);testXinputActivity|=changed(testXinput,observedXinput);
+            testSdl=observedSdl;testXinput=observedXinput;
+            Diagnostics.state("discovery_test_sdl",testToken(observedSdl,testSdlActivity));
+            Diagnostics.state("discovery_test_xinput",windows?testToken(observedXinput,testXinputActivity):"unsupported");
+            status="Discovery test: SDL "+label(observedSdl,testSdlActivity)+"; XInput "+(windows?label(observedXinput,testXinputActivity):"unsupported")+
+                    ". Move controls; "+Math.max(0,(TEST_NANOS-testElapsed+999_999_999L)/1_000_000_000L)+"s";
+        }else if(testRunning){
+            testRunning=false;Diagnostics.event("backend.discovery_test_completed");
+            lastDiscoveryResult="Last test: SDL "+label(testSdl,testSdlActivity)+"; XInput "+(windows?label(testXinput,testXinputActivity):"unsupported");
+            status=lastDiscoveryResult;
+        }
         return frame;
     }
-    public String status(){return status;}
+    private static boolean changed(PadFrame before,PadFrame after){
+        if(!after.connected())return false;
+        if(!before.connected())return !after.neutral(.03f);
+        return !before.buttons().equals(after.buttons())||Math.abs(before.lx()-after.lx())>.03f||
+                Math.abs(before.ly()-after.ly())>.03f||Math.abs(before.rx()-after.rx())>.03f||Math.abs(before.ry()-after.ry())>.03f||
+                Math.abs(before.lt()-after.lt())>.03f||Math.abs(before.rt()-after.rt())>.03f;
+    }
+    private static String label(PadFrame frame,boolean activity){return !frame.connected()?"missing":activity?"input seen":"connected / idle";}
+    private static String testToken(PadFrame frame,boolean activity){return !frame.connected()?"missing":activity?"active":"idle";}
+    public String status(){
+        if(testRunning||lastDiscoveryResult.isEmpty()||status.equals(lastDiscoveryResult))return status;
+        return lastDiscoveryResult+" | "+status;
+    }
     @Override public void close(){active=null;sdl.close();xinput.close();}
 }

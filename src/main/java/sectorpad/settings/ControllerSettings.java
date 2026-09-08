@@ -31,11 +31,12 @@ public final class ControllerSettings {
     public final boolean enabled, hintsEnabled, diagnosticsEnabled, pauseOnDisconnect;
     public final boolean consoleTopLeft;
     public final boolean wheelHoldMode, pauseWheels, shieldToggle, invertScroll, latchedDrag, reducedMotion;
+    public final boolean gyroInvertX, gyroInvertY;
     public final int controllerIndex, hubKeycode, remapKeycode, keyboardKeycode, wheelSlots;
-    public final String glyphStyle, profileId, steeringMode, controllerBackend;
+    public final String glyphStyle, profileId, steeringMode, controllerBackend, gyroMode, gyroActivation;
     public final float pointerSpeed, pointerGamma, pointerDeadzone, pointerOuter, precisionMultiplier;
     public final float scrollSpeed, scrollGamma, repeatDelay, repeatInterval, radialDeadzone, radialHoldSeconds, uiScale;
-    public final float mapPanSpeed, zoomSpeed, aimRange;
+    public final float mapPanSpeed, zoomSpeed, aimRange, gyroSensitivity, gyroSmoothing;
     public final float leftDeadzone, rightDeadzone, leftOuter, rightOuter, leftGamma, rightGamma;
     public final float leftCenterX, leftCenterY, rightCenterX, rightCenterY;
     public final float leftTriggerMin, leftTriggerMax, rightTriggerMin, rightTriggerMax, triggerPress, triggerRelease;
@@ -78,6 +79,12 @@ public final class ControllerSettings {
         shieldToggle = bool(values, "sp_shield_toggle", false);
         latchedDrag = bool(values, "sp_latched_drag", false);
         reducedMotion = bool(values, "sp_reduced_motion", false);
+        gyroMode = choice(values, "sp_gyro_mode", "Off", List.of("Off", "Combat aim", "Pointer", "Aim + pointer"));
+        gyroActivation = choice(values, "sp_gyro_activation", "Hold LT", List.of("Always", "Hold LT", "Hold RT", "Hold LB", "Hold R3"));
+        gyroSensitivity = number(values, "sp_gyro_sensitivity", .006f, .0005f, .05f);
+        gyroSmoothing = number(values, "sp_gyro_smoothing", .35f, 0f, .95f);
+        gyroInvertX = bool(values, "sp_gyro_invert_x", false);
+        gyroInvertY = bool(values, "sp_gyro_invert_y", false);
         mapPanSpeed = number(values, "sp_map_pan_speed", 900f, 100f, 3000f);
         zoomSpeed = number(values, "sp_zoom_speed", 5f, 1f, 20f);
         aimRange = number(values, "sp_aim_range", 1400f, 250f, 4000f);

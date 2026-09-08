@@ -28,6 +28,13 @@ sp_scroll_gamma,Scroll response curve,Double,1.6,,Scroll response is independent
 sp_invert_scroll,Invert scrolling,Boolean,false,,Reverse vertical scrolling without inverting either movement stick.,,,Tuning
 sp_map_pan_speed,Map pan speed,Double,900,,Logical screen units per second for map panning.,100,3000,Tuning
 sp_zoom_speed,Map zoom speed,Double,5,,Maximum zoom wheel steps per second. Zoom is separate from ordinary list scrolling.,1,20,Tuning
+sp_gyro_header,Gyro and touch,Header,Motion and direct interaction,,,,,Tuning
+sp_gyro_mode,Gyro mouse mode,Radio,Off,"Off,Combat aim,Pointer,Aim + pointer","Steam Input can expose the handheld gyro as mouse motion. Combat aim integrates and captures mouse deltas while its activation is held; Pointer leaves normal mouse behavior; Aim + pointer integrates without capturing the pointer. XInput itself has no gyro channel.",,,Tuning
+sp_gyro_activation,Gyro activation,Radio,Hold LT,"Always,Hold LT,Hold RT,Hold LB,Hold R3",Choose when mouse-style gyro deltas refine combat aim. Pointer behavior remains controlled by the Steam Input layout.,,,Tuning
+sp_gyro_sensitivity,Gyro aim sensitivity,Double,0.006,,Combat aim vector change per mouse-style gyro unit.,0.0005,0.05,Tuning
+sp_gyro_smoothing,Gyro smoothing,Double,0.35,,Blend recent gyro deltas. Zero is immediate; higher values reduce jitter.,0,0.95,Tuning
+sp_gyro_invert_x,Invert gyro horizontal,Boolean,false,,Invert horizontal mouse-style gyro motion for combat aim.,,,Tuning
+sp_gyro_invert_y,Invert gyro vertical,Boolean,false,,Invert vertical mouse-style gyro motion for combat aim.,,,Tuning
 sp_repeat_delay,Navigation repeat delay,Double,0.35,,Seconds before held navigation starts repeating.,0.15,1,Tuning
 sp_repeat_interval,Navigation repeat interval,Double,0.09,,Seconds between repeated navigation steps.,0.04,0.5,Tuning
 sp_wheel_header,Wheel settings,Header,Command wheels,,,,,Tuning

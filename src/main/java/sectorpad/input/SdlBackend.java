@@ -52,6 +52,7 @@ public final class SdlBackend implements AutoCloseable {
                 if(standaloneNativeRoot==null)Diagnostics.event("backend.ready");
             }
             manager.update();
+            if(standaloneNativeRoot==null)Diagnostics.state("sdl_mapped_gamepads",Integer.toString(Math.max(0,manager.getNumControllers())));
             selected=discovery.select(now,requestedIndex,slots);
             if(selected<0){
                 instance=-1;ltDown=rtDown=false;

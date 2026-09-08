@@ -40,6 +40,8 @@ public final class SectorPadRuntime implements AutoCloseable {
     private final RepeatKey navigation=new RepeatKey(),modalNavigation=new RepeatKey();
     private final NavigationDirection navigationDirection=new NavigationDirection();
     private final ScrollAccumulator scrolling=new ScrollAccumulator(),zooming=new ScrollAccumulator();
+    private final TouchGesture modalTouch=new TouchGesture(),refitTouch=new TouchGesture();
+    private final GyroAim gyroAim=new GyroAim();
     private final RadialModel wheel=new RadialModel();
     private final TextEntryModel keyboard=new TextEntryModel();
     private final OverlayRenderer renderer=new OverlayRenderer();
@@ -76,6 +78,9 @@ public final class SectorPadRuntime implements AutoCloseable {
             @Override public void changed(ControllerSettings prefs,BindingProfile profile){if(!closed)releaseInputs();}
             @Override public void statusChanged(String message){notifyStatus(message);}
             @Override public String controllerStatus(){return backend.status();}
+            @Override public void testControllerDiscovery(){
+                releaseInputs();backend.startDiscoveryTest(System.nanoTime());requireReconnectAck=false;
+            }
             @Override public void reconnectController(){
                 releaseInputs();game.invalidatePauseResume();
                 if(raw.connected()&&settings.settings().pauseOnDisconnect)game.requestPause();
@@ -123,11 +128,17 @@ public final class SectorPadRuntime implements AutoCloseable {
         Diagnostics.state("independent_triggers",Boolean.toString(raw.independentTriggers()));
         Diagnostics.state("controller_enabled",Boolean.toString(prefs.enabled));
         Diagnostics.state("reconnect_ack",Boolean.toString(requireReconnectAck));
+        Diagnostics.state("gyro_mode",prefs.gyroMode.toLowerCase(Locale.ROOT).replace(' ','_').replace('+','_'));
+        Diagnostics.state("touch_mode","mouse_compatible");
         if(raw.connected()!=previousRaw.connected()){
             Diagnostics.event(raw.connected()?"controller.connected":"controller.disconnected");
             if(raw.connected())notifyStatus("Controller detected. Release controls to begin; X opens Setup on the main menu.");
         }
-        if(focused!=focusedLastFrame){Diagnostics.event(focused?"input.focus_regained":"input.focus_lost");focusedLastFrame=focused;}
+        if(focused!=focusedLastFrame){
+            Diagnostics.event(focused?"input.focus_regained":"input.focus_lost");
+            if(focused&&!raw.connected())backend.requestReconnect();
+            focusedLastFrame=focused;
+        }
         if(raw.connected()&&prefs.enabled&&focused&&(!raw.buttons().equals(previousRaw.buttons())||Math.abs(raw.lx()-previousRaw.lx())>.05f||Math.abs(raw.ly()-previousRaw.ly())>.05f||Math.abs(raw.rx()-previousRaw.rx())>.05f||Math.abs(raw.ry()-previousRaw.ry())>.05f||Math.abs(raw.lt()-previousRaw.lt())>.05f||Math.abs(raw.rt()-previousRaw.rt())>.05f))controllerLastInput=true;
         console.update(controllerLastInput&&raw.connected(),focused,prefs.enabled&&prefs.consoleTopLeft,keyboard.isOpen()&&keyboard.docked(),prefs.uiScale);
         GameContext next=game.context();
@@ -265,6 +276,10 @@ public final class SectorPadRuntime implements AutoCloseable {
                 notifyStatus("Both trigger axes are required. Open Controller Setup to use another binding.");
             }
             float[] move=vector(profile.binding(bindingContext,"combat.move"),calibrated),aim=vector(profile.binding(bindingContext,"combat.aim"),calibrated);
+            boolean gyroEnabled=gyroAimEnabled(prefs)&&gyroActivationHeld(prefs);
+            InputMath.Vector blended=gyroAim.blend(aim[0],aim[1],gyroEnabled);
+            aim[0]=blended.x();aim[1]=blended.y();
+            Diagnostics.state("gyro_aim_active",Boolean.toString(gyroEnabled));
             game.configure(prefs.steeringMode,prefs.shieldToggle,prefs.aimRange);
             game.dispatch(held,edges.pressed(),edges.released(),move[0],move[1],aim[0],aim[1],dt);
         }else if(context.is("CAMPAIGN")&&!campaignPointer&&!context.paused()){
@@ -333,7 +348,18 @@ public final class SectorPadRuntime implements AutoCloseable {
                 default -> {if(key==settings.settings().hubKeycode)openHub();}
             }}finally{physicalModalDispatch=false;}
         }else if(event.isMouseDownEvent()&&!event.isDoubleClick()){
-            physicalModalDispatch=true;try{if(event.isRMBDownEvent()){if(!refitWorkspace.back()){refitSession.nativeMode();releaseInputs();}}else if(event.isLMBDownEvent())refitAction(refitWorkspace.click(event.getX(),event.getY()));}finally{physicalModalDispatch=false;}
+            if(event.isRMBDownEvent()){physicalModalDispatch=true;try{if(!refitWorkspace.back()){refitSession.nativeMode();releaseInputs();}}finally{physicalModalDispatch=false;}}
+            else if(event.isLMBDownEvent())refitTouch.begin(event.getX(),event.getY(),System.nanoTime());
+        }else if(event.isMouseMoveEvent()&&refitTouch.active()){
+            TouchGesture.Update update=refitTouch.move(event.getX(),event.getY());
+            if(update.scrollSteps()!=0)refitWorkspace.move(-update.scrollSteps());
+        }else if(event.isLMBUpEvent()){
+            TouchGesture.Update update=refitTouch.end(event.getX(),event.getY(),System.nanoTime());
+            physicalModalDispatch=true;try{
+                if(update.scrollSteps()!=0)refitWorkspace.move(-update.scrollSteps());
+                if(update.result()==TouchGesture.Result.TAP)refitAction(refitWorkspace.click(update.x(),update.y()));
+                else if(update.result()==TouchGesture.Result.LONG_PRESS)refitWorkspace.details();
+            }finally{physicalModalDispatch=false;}
         }else if(event.isMouseScrollEvent())refitWorkspace.move(-Integer.signum(event.getEventValue()));
     }
     private void refitAction(String id){
@@ -662,6 +688,13 @@ public final class SectorPadRuntime implements AutoCloseable {
         boolean refitOwnedBatch=refitSession.visible();
         for(InputEventAPI event:events){
             if(event.isConsumed())continue;
+            if(event.isMouseMoveEvent()&&context.is("COMBAT")&&!hasModal()&&raw.connected()){
+                ControllerSettings prefs=settings.settings();
+                if(gyroAimEnabled(prefs)&&gyroActivationHeld(prefs)){
+                    gyroAim.motion(event.getDX(),event.getDY(),prefs.gyroSensitivity,prefs.gyroSmoothing,prefs.gyroInvertX,prefs.gyroInvertY);
+                    if(prefs.gyroMode.equals("Combat aim"))event.consume();
+                }
+            }
             if(refitOwnedBatch){
                 if(refitSession.visible())processRefitEvent(event);
                 if(event.isMouseEvent()||event.isKeyboardEvent())event.consume();
@@ -678,6 +711,15 @@ public final class SectorPadRuntime implements AutoCloseable {
             else if(hasModal()&&remapPanel==null&&(event.isMouseEvent()||event.isKeyboardEvent())){
                 if(event.isKeyDownEvent()){
                     physicalModalDispatch=true;try{modalKey(event);}finally{physicalModalDispatch=false;}
+                }else if(event.isLMBDownEvent()&&!event.isDoubleClick()){
+                    modalTouch.begin(event.getX(),event.getY(),System.nanoTime());
+                }else if(event.isMouseMoveEvent()&&modalTouch.active()){
+                    TouchGesture.Update update=modalTouch.move(event.getX(),event.getY());
+                    if(wheel.isOpen())renderer.pointWheel(wheel,update.x(),update.y());
+                    else if(update.scrollSteps()!=0&&keyboard.isOpen())keyboard.move(0,-update.scrollSteps());
+                }else if(event.isLMBUpEvent()){
+                    TouchGesture.Update update=modalTouch.end(event.getX(),event.getY(),System.nanoTime());
+                    physicalModalDispatch=true;try{modalTouchRelease(update);}finally{physicalModalDispatch=false;}
                 }else if(event.isMouseDownEvent()&&!event.isDoubleClick()){
                     physicalModalDispatch=true;try{modalMouse(event);}finally{physicalModalDispatch=false;}
                 }
@@ -790,6 +832,25 @@ public final class SectorPadRuntime implements AutoCloseable {
             && !title.isShowingDialog()&&!title.isShowingCodex()&&title.getDialogType()==null
             && ReadOnlyUiNavigator.modalIdentity(game.uiRoot())==null;
     }
+    private void modalTouchRelease(TouchGesture.Update update){
+        if(update.result()==TouchGesture.Result.LONG_PRESS){cancelOverlays();releaseInputs();return;}
+        if(update.result()!=TouchGesture.Result.TAP&&!wheel.isOpen())return;
+        if(keyboard.isOpen()){
+            if(update.scrollSteps()!=0){keyboard.move(0,-update.scrollSteps());return;}
+            var hit=renderer.keyAt(update.x(),update.y());if(hit==null)return;
+            keyboard.move(hit.column()-keyboard.column(),hit.row()-keyboard.row());
+            String command=keyboard.select();
+            if(command.equals("accept"))acceptText();
+            else if(command.equals("cancel")){keyboard.close();closeModal();}
+        }else if(wheel.isOpen()&&renderer.pointWheel(wheel,update.x(),update.y()))commitWheel();
+    }
+    private boolean gyroAimEnabled(ControllerSettings prefs){
+        return prefs.gyroMode.equals("Combat aim")||prefs.gyroMode.equals("Aim + pointer");
+    }
+    private boolean gyroActivationHeld(ControllerSettings prefs){
+        if(prefs.gyroActivation.equals("Always"))return true;
+        return calibrated.down(prefs.gyroActivation.substring(5).toUpperCase(Locale.ROOT));
+    }
     private static boolean nativeSettingsOpen(){
         try{return lunalib.backend.ui.settings.LunaSettingsUIMainPanel.Companion.getPanelOpen();}
         catch(LinkageError unavailable){return true;}
@@ -805,7 +866,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         if(remapPanel!=null){settings.revert("Controller Setup closed. Previous controls restored.");LunaRemappingPanel oldPanel=remapPanel;oldPanel.cancelCapture("Screen or input ownership changed.");OverlayHost.Handle handle=remapHandle;remapHandle=null;remapPanel=null;oldPanel.onClose();if(handle!=null)handle.close();}
         releasePause();textField=null;textCapture=null;
     }
-    private void releaseInputs(){bridge.releaseAll();game.neutralize();gate.disarm();scrolling.reset();zooming.reset();navigation.reset();navigationDirection.reset();latchedDrag=false;panning=false;pendingWheel=null;}
+    private void releaseInputs(){bridge.releaseAll();game.neutralize();gate.disarm();scrolling.reset();zooming.reset();navigation.reset();navigationDirection.reset();modalTouch.cancel();refitTouch.cancel();gyroAim.recenter(0,0);latchedDrag=false;panning=false;pendingWheel=null;}
     private void defer(Runnable action){deferredAction=action;deferredContext=context.identity();deferredControllerOwned=!physicalModalDispatch;}
     public void emergencyStop(){
         refitSession.reset();

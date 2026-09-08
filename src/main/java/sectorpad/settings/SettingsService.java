@@ -27,6 +27,7 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         void changed(ControllerSettings settings, BindingProfile profile);
         default void statusChanged(String status) { }
         default void reconnectController() { }
+        default void testControllerDiscovery() { }
         default String controllerStatus() { return "Controller discovery unavailable"; }
     }
     private static final Source LUNA_SOURCE = new Source() {
@@ -66,6 +67,11 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         revert("Reconnecting controller; saved controls retained.");
         listener.reconnectController();
         report("Controller discovery restarted. Release controls; then press A when prompted.");
+    }
+    public void testControllerDiscovery() {
+        revert("Controller discovery test starting; saved controls retained.");
+        listener.testControllerDiscovery();
+        report("Ten-second discovery test started. Move sticks and press buttons, then review the controller status or export diagnostics.");
     }
     public void setListener(Listener listener) { this.listener = Objects.requireNonNull(listener); }
     public void initialize() {

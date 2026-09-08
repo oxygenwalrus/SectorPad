@@ -17,7 +17,8 @@ public final class PreferenceResets {
         MAP("Map movement", "sp_map_pan_speed", "sp_zoom_speed"),
         NAVIGATION("Navigation and refit", "sp_repeat_delay", "sp_repeat_interval", "sp_refit_auto_open"),
         WHEELS("Wheel behavior", "sp_wheel_slots", "sp_wheel_hold_mode", "sp_pause_wheels", "sp_radial_deadzone", "sp_radial_hold"),
-        COMBAT("Combat steering and aim", "sp_steering_mode", "sp_aim_range", "sp_shield_toggle"),
+        COMBAT("Combat steering and aim", "sp_steering_mode", "sp_aim_range", "sp_shield_toggle",
+                "sp_gyro_mode", "sp_gyro_activation", "sp_gyro_sensitivity", "sp_gyro_smoothing", "sp_gyro_invert_x", "sp_gyro_invert_y"),
         TRIGGER_BUTTONS("Trigger button thresholds", "sp_trigger_press", "sp_trigger_release"),
         OVERLAY("Overlay appearance", "sp_hints", "sp_diagnostics", "sp_reduced_motion", "sp_ui_scale", "sp_console_top_left");
         public final String label;
