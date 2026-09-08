@@ -18,6 +18,7 @@ public final class SdlBackend implements AutoCloseable {
     private boolean retryPending;
     private int requestedIndex=-1;
     private final ControllerDiscovery discovery=new ControllerDiscovery();
+    private final BackendRecovery recovery=new BackendRecovery();
     private final ControllerDiscovery.Slots slots=new ControllerDiscovery.Slots(){
         public boolean connected(int slot){return manager.getControllerIndex(slot).isConnected();}
         public int instance(int slot)throws ControllerUnpluggedException{return manager.getControllerIndex(slot).getDeviceInstanceID();}
@@ -36,6 +37,7 @@ public final class SdlBackend implements AutoCloseable {
         int valid=index>=0&&index<ControllerDiscovery.LIMIT?index:-1;
         if(valid!=requestedIndex){requestedIndex=valid;selected=-1;instance=-1;ltDown=rtDown=false;discovery.reset();}
     }
+    public synchronized void requestReconnect(){close();recovery.reset();status="SDL reconnect requested";}
     public synchronized PadFrame poll(long now) {
         try {
             if(manager==null) {
@@ -53,10 +55,19 @@ public final class SdlBackend implements AutoCloseable {
             selected=discovery.select(now,requestedIndex,slots);
             if(selected<0){
                 instance=-1;ltDown=rtDown=false;
+                boolean any=false;for(int i=0;i<ControllerDiscovery.LIMIT;i++)any|=slots.connected(i);
+                if(standaloneNativeRoot==null)Diagnostics.state("sdl_open_slots",any?"some":"none");
+                if(recovery.restartDue(now,any)){
+                    close();status="SDL discovery restarting; waiting for a controller";
+                    if(standaloneNativeRoot==null)Diagnostics.event("backend.sdl_rescan_restart");
+                    return PadFrame.disconnected();
+                }
                 status=requestedIndex<0?"SDL ready; waiting for a controller (automatic discovery)":
                     "SDL ready; waiting for selected device "+(requestedIndex+1);
                 return PadFrame.disconnected();
             }
+            recovery.reset();
+            if(standaloneNativeRoot==null){Diagnostics.state("sdl_open_slots","some");Diagnostics.state("sdl_selected_slot",Integer.toString(selected));}
             ControllerIndex c=manager.getControllerIndex(selected);
             int id=c.getDeviceInstanceID();
             if(id!=instance){instance=id;ltDown=rtDown=false;}

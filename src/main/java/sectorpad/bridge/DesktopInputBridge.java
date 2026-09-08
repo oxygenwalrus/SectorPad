@@ -92,8 +92,7 @@ public final class DesktopInputBridge implements AutoCloseable {
     private boolean pumpOwned(boolean enabled, String nextContext) {
         if (retryPending && clock.getAsLong() - retryAt < 0) return false;
         retryPending = false;
-        boolean focused = enabled && surface.focused();
-        if (focused && output != null) focused = output.acceptsFocus();
+        boolean focused = enabled && hasGameFocus();
         boolean changed = context != null && !context.equals(nextContext);
         if (!focused || changed) {
             releaseAll();
@@ -203,7 +202,15 @@ public final class DesktopInputBridge implements AutoCloseable {
     private boolean ready() { return active && !closed && output != null && surface.focused() && output.acceptsFocus(); }
 
     /** Authoritative focus gate for both bridged input and direct game API actions. */
-    public synchronized boolean hasGameFocus() { return !closed && surface.focused() && (output == null || output.acceptsFocus()); }
+    public synchronized boolean hasGameFocus() {
+        if(closed)return false;
+        boolean surfaceFocused=surface.focused();
+        // Keep both independent gates; a Wine report can now distinguish window focus from native foreground.
+        boolean nativeFocused=surfaceFocused && (output==null || output.acceptsFocus());
+        Diagnostics.state("bridge.surface_focus",Boolean.toString(surfaceFocused));
+        Diagnostics.state("bridge.native_focus",output==null?"uninitialized":!surfaceFocused?"not_queried":Boolean.toString(nativeFocused));
+        return nativeFocused;
+    }
 
     public synchronized void movePointer(float x, float y) {
         if (!ready()) return;

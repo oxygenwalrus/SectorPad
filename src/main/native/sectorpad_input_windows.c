@@ -1,6 +1,7 @@
 /* SectorPad Windows input adapter. No game hooks, patches, replacement libraries or data access. */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <xinput.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "jni.h"
@@ -190,3 +191,43 @@ JNIEXPORT jint JNICALL JNI_FN(nativeUnicode)(JNIEnv *env,jclass type,jlong handl
     return submit(context(handle),events,2,TRUE);
 }
 JNIEXPORT void JNICALL JNI_FN(nativeClose)(JNIEnv *env,jclass type,jlong handle) {UNUSED(env);UNUSED(type);close_observer(context(handle));}
+
+/* Independent read-only controller path for runners whose SDL discovery misses an XInput pad.
+   Load only system DLL paths, and resolve GetState without linking or calling SetState/Enable. */
+typedef DWORD (WINAPI *SectorPadGetState)(DWORD,XINPUT_STATE *);
+typedef struct XInputReader { HMODULE module; SectorPadGetState get_state; } XInputReader;
+#define XINPUT_JNI(name) Java_sectorpad_input_WindowsXInputBackend_##name
+JNIEXPORT jboolean JNICALL XINPUT_JNI(nativeIsWine)(JNIEnv *env,jclass type) {
+    HMODULE ntdll=GetModuleHandleW(L"ntdll.dll");UNUSED(env);UNUSED(type);
+    return ntdll!=NULL && GetProcAddress(ntdll,"wine_get_version")!=NULL ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jlong JNICALL XINPUT_JNI(nativeOpen)(JNIEnv *env,jclass type) {
+    static const WCHAR *names[]={L"xinput1_4.dll",L"xinput1_3.dll",L"xinput9_1_0.dll"};
+    WCHAR path[MAX_PATH];UINT length;int index;XInputReader *reader;UNUSED(env);UNUSED(type);
+    length=GetSystemDirectoryW(path,MAX_PATH);
+    if(length==0 || length>=MAX_PATH-20)return 0;
+    reader=(XInputReader *)calloc(1,sizeof(*reader));if(reader==NULL)return 0;
+    path[length++]=L'\\';
+    for(index=0;index<3;index++) {
+        lstrcpyW(path+length,names[index]);
+        reader->module=LoadLibraryW(path);
+        if(reader->module==NULL)continue;
+        reader->get_state=(SectorPadGetState)(uintptr_t)GetProcAddress(reader->module,"XInputGetState");
+        if(reader->get_state!=NULL)return (jlong)(intptr_t)reader;
+        FreeLibrary(reader->module);reader->module=NULL;
+    }
+    free(reader);return 0;
+}
+JNIEXPORT jint JNICALL XINPUT_JNI(nativeRead)(JNIEnv *env,jclass type,jlong handle,jint slot,jintArray target) {
+    XInputReader *reader=(XInputReader *)(intptr_t)handle;XINPUT_STATE state={0};DWORD result;jint values[7];UNUSED(type);
+    if(reader==NULL || slot<0 || slot>3 || target==NULL || (*env)->GetArrayLength(env,target)!=7)return ERROR_INVALID_PARAMETER;
+    result=reader->get_state((DWORD)slot,&state);if(result!=ERROR_SUCCESS)return (jint)result;
+    values[0]=state.Gamepad.wButtons;values[1]=state.Gamepad.sThumbLX;values[2]=state.Gamepad.sThumbLY;
+    values[3]=state.Gamepad.sThumbRX;values[4]=state.Gamepad.sThumbRY;
+    values[5]=state.Gamepad.bLeftTrigger;values[6]=state.Gamepad.bRightTrigger;
+    (*env)->SetIntArrayRegion(env,target,0,7,values);return ERROR_SUCCESS;
+}
+JNIEXPORT void JNICALL XINPUT_JNI(nativeClose)(JNIEnv *env,jclass type,jlong handle) {
+    XInputReader *reader=(XInputReader *)(intptr_t)handle;UNUSED(env);UNUSED(type);
+    if(reader!=NULL){FreeLibrary(reader->module);free(reader);}
+}

@@ -78,6 +78,11 @@ public final class SettingsTests {
         values.numbers.put("sp_trigger_press", .2); values.numbers.put("sp_trigger_release", .9); values.ints.put("sp_controller_index", 100);
         values.strings.put("sp_glyphs", "PlayStation"); values.strings.put("sp_wheel_slots", "7");
         ControllerSettings settings = ControllerSettings.from(values);
+        check(settings.controllerBackend.equals("Automatic"), "Missing backend preference preserves automatic discovery");
+        values.strings.put("sp_controller_backend", "XInput");
+        check(ControllerSettings.from(values).controllerBackend.equals("XInput"), "Wine compatibility backend persists in Luna settings");
+        values.strings.put("sp_controller_backend", "bad");
+        check(ControllerSettings.from(values).controllerBackend.equals("Automatic"), "Unknown backend values safely default");
         check(settings.pointerSpeed == 900 && settings.pointerGamma == 3, "Nonfinite tuning defaults and ranges clamp");
         check(settings.triggerRelease <= settings.triggerPress - .049f, "Trigger hysteresis is always maintained");
         check(settings.controllerIndex == 7 && settings.glyphStyle.equals("Automatic") && settings.wheelSlots == 8, "Unsupported selectors fall back safely");
@@ -187,6 +192,13 @@ public final class SettingsTests {
         check(barriers[0] >= 8, "Every effective mapping transition notifies the release/rearm owner");
         service.preview(BindingProfile.southpaw()); service.setDevice("xbox-controller");
         check(!service.isPreviewing(), "Device replacement cancels active preview");
+        int[] reconnects={0};
+        service.setListener(new SettingsService.Listener(){
+            public void changed(ControllerSettings prefs,BindingProfile profile){barriers[0]++;}
+            public void reconnectController(){check(!service.isPreviewing(), "Reconnect rolls back previews before resetting device");reconnects[0]++;}
+        });
+        service.preview(BindingProfile.southpaw()); service.reconnectController();
+        check(reconnects[0]==1 && service.activeProfile().equals(change), "Manual discovery restart preserves committed mappings");
         service.preview(BindingProfile.southpaw()); service.close(); check(!service.isPreviewing(), "Shutdown cancels uncommitted mapping");
         SettingsService brokenClose = new SettingsService(new ProfileStore(Files.createTempDirectory("sectorpad-close-test-")), new MutableSource(), () -> time[0]);
         brokenClose.initialize(); brokenClose.preview(BindingProfile.southpaw());

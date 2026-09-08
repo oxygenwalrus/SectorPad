@@ -1,6 +1,6 @@
 # Compatibility and verification
 
-This is an evidence snapshot for SectorPad `1.1.0`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
+This is an evidence snapshot for SectorPad `1.1.1`, dated **8 September 2026**. Implementation coverage, automated verification, live UI verification, and physical-device acceptance are different levels of evidence. A connected XInput controller is detected by both the standalone probe and the isolated game on its first input frame. Full production or handheld compatibility is not established.
 
 ## Environment and evidence
 
@@ -49,9 +49,15 @@ Live checks in the isolated Windows game covered the radial and refit at 1280×8
 
 The full build runs deterministic native-texture checks plus 23 test/probe programs, including 137 refit checks, 2,916 settings assertions and 24,076 overlay geometry checks. All 32 original installation/dependency baseline hashes remain unchanged.
 
+## 1.1.1 Wine discovery and reconnect
+
+The user reported that the mod loaded on a ROG Ally running SteamOS, launched through Steam and Lutris/Wine, but received no controller input. That report does not identify whether SDL discovery, the runner's gamepad exposure or input focus caused the failure. The new automatic Wine route prefers a direct XInput reader and falls back to SDL when no controller is exposed. Windows normally keeps SDL preference; native Linux uses SDL. A persistent LunaLib selector allows either API to be tested independently. The F10 setup reconnect button releases held input and restarts discovery without discarding committed controls. Empty SDL discovery also receives bounded session restarts.
+
+Automated checks cover preferred API selection, late controller discovery, single-source ownership, explicit slot isolation, disconnect boundaries, restart backoff, XInput axes/buttons/triggers, API failures and preview rollback before reconnect. The native DLL builds with warnings treated as errors; its passive Windows probe loaded successfully and queried all four XInput slots. No physical controller was connected during that probe. Focus checks remain intact and now have separate diagnostic fields. No game or computer UI automation was used for this update. Actual ROG Ally/SteamOS/Wine acceptance remains pending. See [test and recovery instructions](HANDHELDS_AND_DIAGNOSTICS.md#steamos-with-lutriswine-or-proton).
+
 ## Input ownership
 
-SectorPad owns an SDL controller manager, mod-local native files, game callbacks, and its added panels. It does not replace the global LWJGL Mouse/Keyboard implementation or the game's classes. The library loader calls `System.load` on explicit native paths inside the mod. Runtime persistence uses the public common-data API. UI discovery uses public methods and `MethodHandles.publicLookup`; it does not enable private access, bypass the script classloader, or alter game security settings.
+SectorPad owns an SDL controller manager and a Windows XInput reader selected as a single input source, mod-local native files, game callbacks, and its added panels. It does not replace the global LWJGL Mouse/Keyboard implementation or the game's classes. The library loader calls `System.load` on explicit native paths inside the mod. Runtime persistence uses the public common-data API. UI discovery uses public methods and `MethodHandles.publicLookup`; it does not enable private access, bypass the script classloader, or alter game security settings.
 
 The mouse adapter constructs the game's own concrete mouse events and sends them on the game thread through the current original UI root's public input processor. It tracks the current UI identity and focus. It does not append synthetic interface objects to a copied pre-core event list: those lists are not the original input queue. This adapter depends on the exact public signatures inspected in 0.98a-RC8, so a game update requires another signature and live-behavior check.
 

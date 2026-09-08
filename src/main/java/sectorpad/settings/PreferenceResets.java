@@ -11,7 +11,7 @@ import java.util.Set;
 public final class PreferenceResets {
     public static final int SCHEMA_VERSION = 1;
     public enum Section {
-        GENERAL("Device and shortcuts", "sp_enabled", "sp_controller_index", "sp_glyphs", "sp_pause_disconnect", "sp_hub_key", "sp_keyboard_key", "sp_remap_key"),
+        GENERAL("Device and shortcuts", "sp_enabled", "sp_controller_index", "sp_controller_backend", "sp_glyphs", "sp_pause_disconnect", "sp_hub_key", "sp_keyboard_key", "sp_remap_key"),
         POINTER("Pointer", "sp_pointer_speed", "sp_pointer_gamma", "sp_pointer_deadzone", "sp_pointer_outer", "sp_precision", "sp_latched_drag"),
         SCROLL("Scrolling", "sp_scroll_speed", "sp_scroll_gamma", "sp_invert_scroll"),
         MAP("Map movement", "sp_map_pan_speed", "sp_zoom_speed"),

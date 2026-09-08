@@ -32,7 +32,7 @@ public final class ControllerSettings {
     public final boolean consoleTopLeft;
     public final boolean wheelHoldMode, pauseWheels, shieldToggle, invertScroll, latchedDrag, reducedMotion;
     public final int controllerIndex, hubKeycode, remapKeycode, keyboardKeycode, wheelSlots;
-    public final String glyphStyle, profileId, steeringMode;
+    public final String glyphStyle, profileId, steeringMode, controllerBackend;
     public final float pointerSpeed, pointerGamma, pointerDeadzone, pointerOuter, precisionMultiplier;
     public final float scrollSpeed, scrollGamma, repeatDelay, repeatInterval, radialDeadzone, radialHoldSeconds, uiScale;
     public final float mapPanSpeed, zoomSpeed, aimRange;
@@ -50,6 +50,7 @@ public final class ControllerSettings {
         diagnosticsEnabled = bool(values, "sp_diagnostics", false);
         pauseOnDisconnect = bool(values, "sp_pause_disconnect", true);
         controllerIndex = integer(values, "sp_controller_index", -1, -1, 7);
+        controllerBackend = choice(values, "sp_controller_backend", "Automatic", List.of("Automatic", "SDL", "XInput"));
         // Luna uses KEY_NONE (0) when a Keycode field is cleared; never turn that into Escape (1).
         hubKeycode = integer(values, "sp_hub_key", 66, 0, 255);
         remapKeycode = integer(values, "sp_remap_key", 68, 0, 255);

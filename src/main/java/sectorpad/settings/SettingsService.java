@@ -26,6 +26,8 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
         /** The owner must release all mod-held input and require neutral input on this callback. */
         void changed(ControllerSettings settings, BindingProfile profile);
         default void statusChanged(String status) { }
+        default void reconnectController() { }
+        default String controllerStatus() { return "Controller discovery unavailable"; }
     }
     private static final Source LUNA_SOURCE = new Source() {
         public ControllerSettings settings() { return ControllerSettings.load(); }
@@ -59,6 +61,12 @@ public final class SettingsService implements LunaSettingsListener, AutoCloseabl
 
     public SettingsService(ProfileStore store) { this(store, LUNA_SOURCE, System::nanoTime); }
     public SettingsService(ProfileStore store, Source source, LongSupplier clock) { this.store = Objects.requireNonNull(store); this.source = Objects.requireNonNull(source); this.clock = Objects.requireNonNull(clock); }
+    public String controllerStatus() { return listener.controllerStatus(); }
+    public void reconnectController() {
+        revert("Reconnecting controller; saved controls retained.");
+        listener.reconnectController();
+        report("Controller discovery restarted. Release controls; then press A when prompted.");
+    }
     public void setListener(Listener listener) { this.listener = Objects.requireNonNull(listener); }
     public void initialize() {
         if (initialized) return;

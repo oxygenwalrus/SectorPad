@@ -273,8 +273,13 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         else profilesMode = true;
         capture.reset(); dirty = true;
     }
+    private void reconnectController() {
+        capture.cancel("Controller discovery restarted.");armed=false;previous=Set.of();
+        service.reconnectController();dirty=true;
+    }
     private List<SetupTool> tools() {
         List<SetupTool> tools = new ArrayList<>();
+        tools.add(new SetupTool("Reconnect controller", this::reconnectController));
         tools.add(new SetupTool("Export diagnostic report", () -> service.report(sectorpad.diagnostics.Diagnostics.exportReport())));
         tools.add(new SetupTool("Save Luna calibration for this controller", () -> service.applyLunaCalibrationToDevice()));
         tools.add(new SetupTool("Restore standard controls", () -> { capture.reset(); draft = BindingProfile.defaults(); service.preview(draft); }));
@@ -388,7 +393,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
         button(ui, "Close / Escape", 2 * (third + gap), footer, third, 30, false, this::closePanel);
         button(ui, (profilesMode ? "Tools" : toolsMode ? "Wheels" : "Profiles") + " / View / P", 0, footer + 36, third, 27, profilesMode || toolsMode, this::nextSection);
         button(ui, "Save device calibration", third + gap, footer + 36, third, 27, false, () -> { if (!hasPending() && !service.isPreviewing() && !isCapturing()) service.applyLunaCalibrationToDevice(); });
-        button(ui, "Export committed profile", 2 * (third + gap), footer + 36, third, 27, false, () -> { if (!hasPending()) service.exportCurrentProfile(); });
+        button(ui, "Reconnect controller", 2 * (third + gap), footer + 36, third, 27, false, () -> { if (!hasPending()) reconnectController(); });
     }
     private void buildActions(TooltipMakerAPI ui, float width, float top, float rowHeight) {
         List<String> actions = actions(); int start = selected / pageSize * pageSize;
@@ -446,7 +451,7 @@ public final class LunaRemappingPanel extends LunaBaseCustomPanelPlugin {
     }
     private void updateLive() {
         if (diagram == null) return; diagram.update(latest);
-        deviceLabel.setText(shorten(latest.deviceName, 55) + (latest.focused ? "" : " — focus lost"));
+        deviceLabel.setText(shorten(latest.connected ? latest.deviceName : service.controllerStatus(), 65) + (latest.focused ? "" : " — focus lost"));
         BindingProfile shown = service.isPreviewing() ? service.activeProfile() : draft;
         List<String> matches = new ArrayList<>();
         shown.bindings(context()).forEach((action, control) -> { if (latest.buttons.contains(control)) matches.add(BindingProfile.actionLabel(action)); });

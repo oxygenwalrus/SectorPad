@@ -9,7 +9,7 @@ import sectorpad.bridge.DesktopInputBridge;
 import sectorpad.bridge.ReadOnlyUiNavigator;
 import sectorpad.core.*;
 import sectorpad.game.*;
-import sectorpad.input.SdlBackend;
+import sectorpad.input.ControllerBackend;
 import sectorpad.settings.*;
 import sectorpad.ui.OverlayRenderer;
 import sectorpad.ui.OverlayLayout;
@@ -22,7 +22,7 @@ import java.util.*;
 public final class SectorPadRuntime implements AutoCloseable {
     private static final SectorPadRuntime INSTANCE=new SectorPadRuntime();
     public static SectorPadRuntime get(){return INSTANCE;}
-    private final SdlBackend backend=new SdlBackend();
+    private final ControllerBackend backend=new ControllerBackend();
     private final DesktopInputBridge bridge=new DesktopInputBridge();
     private final GameActions game=new GameActions(this::ordinaryAction);
     private final CargoQuantityAdapter quantities=new CargoQuantityAdapter();
@@ -75,6 +75,13 @@ public final class SectorPadRuntime implements AutoCloseable {
         settings.setListener(new SettingsService.Listener(){
             @Override public void changed(ControllerSettings prefs,BindingProfile profile){if(!closed)releaseInputs();}
             @Override public void statusChanged(String message){notifyStatus(message);}
+            @Override public String controllerStatus(){return backend.status();}
+            @Override public void reconnectController(){
+                releaseInputs();game.invalidatePauseResume();
+                if(raw.connected()&&settings.settings().pauseOnDisconnect)game.requestPause();
+                backend.requestReconnect();raw=calibrated=PadFrame.disconnected();
+                wasConnected=false;requireReconnectAck=true;modalPrevious=Set.of();
+            }
         });
         Diagnostics.startSession();
         settings.initialize();
@@ -106,8 +113,8 @@ public final class SectorPadRuntime implements AutoCloseable {
         ControllerSettings prefs=settings.settings();
         game.configureCampaign(prefs.zoomSpeed);
         String previousDevice=raw.deviceId();PadFrame previousRaw=raw;
-        backend.selectDevice(prefs.controllerIndex);raw=backend.poll(now);
-        if(raw.connected())settings.setDevice("sdl:"+raw.deviceName()+":standard-gamepad");
+        backend.configure(prefs.controllerBackend,prefs.controllerIndex);raw=backend.poll(now);
+        if(raw.connected())settings.setDevice((raw.deviceId().startsWith("xinput:")?"xinput:":"sdl:")+raw.deviceName()+":standard-gamepad");
         // Menus, quantity cancellation and gameplay must share the same calibrated trigger edges.
         calibrated=calibrate(raw,prefs);
         boolean focused=bridge.hasGameFocus();
@@ -739,7 +746,7 @@ public final class SectorPadRuntime implements AutoCloseable {
         if(console.isOpen()&&!hasModal())footer=prompt("UI","ui.secondary")+" Keyboard   "+prompt("UI","ui.actions")+" Complete   "+prompt("UI","ui.confirm")+" Run command   "+prompt("UI","ui.cancel")+" Close";
         if(quantities.isActive())footer=prompt("UI","ui.cancel")+" / Escape Cancel";
         String banner=raw.connected()?context.label()+" · "+(campaignPointer?"Pointer":precision?"Precision":multiSelect?"Multi-select":"Controller"):
-            backend.status().startsWith("Controller backend unavailable")?"Controller input unavailable. See starsector.log for details.":"Waiting for gamepad · Handhelds: enable Gamepad mode · F10 Setup";
+            backend.status().startsWith("Controller backend unavailable")?"Controller input unavailable. See starsector.log for details.":"Waiting for gamepad · F10 Setup > Reconnect controller";
         if(recoveryOverride)banner="Recovery controls active · Enable SectorPad in Mod settings";
         if(context.is("CAMPAIGN")&&raw.connected()&&!hasModal()){
             banner=context.paused()?"Campaign paused · "+prompt("CAMPAIGN","campaign.pause")+" Resume · Left stick moves pointer"

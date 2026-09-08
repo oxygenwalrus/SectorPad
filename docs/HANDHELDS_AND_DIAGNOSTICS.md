@@ -2,7 +2,24 @@
 
 SectorPad discovers an available controller as soon as its runtime starts. You can launch Starsector using a keyboard, mouse or touchscreen and then use the controller without restarting the game or pressing a function key. Keyboard and mouse activity does not turn off controller discovery.
 
-SDL checks connection changes every poll. SectorPad also retries disconnected controller slots once per second to recover when a handheld changes modes without a usable connection notification. This fallback leaves connected controllers open. Automatic selection retains the active physical instance when SDL device indices change; an explicitly selected device waits for that slot instead of silently choosing another controller. Backend initialization failures are logged and retried after five seconds.
+SDL checks connection changes every poll. SectorPad also retries disconnected controller slots once per second to recover when a handheld changes modes without a usable connection notification. This fallback leaves connected controllers open. If no usable SDL slot exists for ten seconds, SectorPad restarts its own SDL session; repeated empty discovery backs off to thirty seconds. This full rescan stops while any slot is connected, even if an explicit different slot is selected. Automatic selection retains the active physical instance when SDL device indices change; an explicitly selected device waits for that slot instead of silently choosing another controller. Backend initialization failures are logged and retried after five seconds.
+
+## SteamOS with Lutris/Wine or Proton
+
+Version 1.1.1 adds a direct, read-only Windows XInput controller path. A Windows JVM running through Wine still needs Windows native libraries; SectorPad detects Wine through the existing `ntdll` feature export and uses XInput first in Automatic mode. It does not try to load a Linux `.so` into that Windows process. Native Linux remains on SDL. If the preferred API exposes no controller and the controller slot is automatic, the alternate API is tried. Once an API has a connected controller, it keeps ownership until loss, a setting change or manual reconnect. Inputs from both APIs are never merged.
+
+For the Ally setup reported through Steam and Lutris:
+
+1. Update the complete SectorPad mod folder, including its `native` folder, then restart Starsector. The new Java code needs the matching bundled DLL.
+2. Leave **LunaLib > SectorPad > General > Controller input backend** on **Automatic** and **Controller slot** on **-1** initially. The controller should be discovered without a button press.
+3. If input remains unavailable, open **F10 Controller Setup** using keyboard, or open Controller Setup through LunaLib with mouse/touch. Click **Reconnect controller** at the bottom right. It is also available under Tools. The action releases held mod input, cancels an unconfirmed binding preview, reopens discovery, and retains saved mappings. Release sticks/buttons, then press A if the reconnect prompt appears.
+4. If SDL is shown as connected but produces no input, choose **XInput** in the native LunaLib backend selector and Save. Choose **SDL** to explicitly compare the other path. These settings persist; changing them creates a release/rearm boundary. XInput accepts slot values 0-3; SDL accepts 0-7. An explicit slot never falls through to the other API's same-numbered device.
+5. If neither path sees a controller, check that the Steam shortcut uses gamepad outputs and that the controller reaches the Wine game process. A keyboard/mouse-only layout cannot be discovered as a gamepad. SectorPad does not alter Steam layouts, Lutris runners, Wine registry entries or device permissions. Valve documents how [Steam Input gamepad emulation](https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices) presents controller input through gamepad APIs.
+6. Export diagnostics from **Controller Setup > Tools > Export diagnostic report** after trying the controls. Send `diagnostics.json.data` (or `diagnostics.json`, depending on the game's storage wrapper) and the game log with the test result.
+
+The report now distinguishes `wine_runtime`, `backend_mode`, `active_backend`, `requested_slot`, SDL open-slot availability and XInput API results. `bridge.surface_focus` and `bridge.native_focus` distinguish the game's window focus from the Windows/Wine foreground check. Both focus protections remain in force; reconnect does not send input to another app. Report values contain no controller samples, hardware serials, Wine prefix path or environment-variable dump.
+
+This change has automated routing/recovery tests and a passive native Windows probe. The reported ROG Ally SteamOS/Lutris/Wine combination has not been reproduced locally; the user's next device test is required to establish whether the runner exposes its controller through either API. Discovery recovery cannot create a controller hidden from both APIs.
 
 ## ROG Ally and other Windows handhelds
 

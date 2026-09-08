@@ -203,7 +203,7 @@ def main():
                 testname='.'.join(test.relative_to(ROOT/'src/test/java').with_suffix('').parts)
                 native_probe=testname.endswith(('BackendProbe','WindowsInputNativeProbe'))
                 if native_probe and not args.probe: continue
-                if testname.endswith('WindowsInputNativeProbe') and os.name!='nt': continue
+                if testname.endswith(('WindowsInputNativeProbe','WindowsXInputBackendProbe')) and os.name!='nt': continue
                 extra=[ROOT/'mod/data/config/LunaSettings.csv'] if testname.endswith('SettingsTests') else [native] if native_probe else [args.game] if testname.endswith('ConsoleApiTests') else []
                 run([java,'-noverify','-ea','-cp',testcp,testname]+extra)
     release=build/'package'/'SectorPad'

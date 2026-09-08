@@ -27,9 +27,10 @@ public final class BridgeTests {
         failedReleaseIsolation();
         failedOutputClose();
         authoritativeForeground();
+        splitFocusDiagnostics();
         observerRetry();
         stoppedObserverRecovery();
-        System.out.println("BridgeTests: 17 lifecycle and coordinate scenarios passed");
+        System.out.println("BridgeTests: 18 lifecycle and coordinate scenarios passed");
     }
 
     private static void pacedTaps() {
@@ -243,6 +244,17 @@ public final class BridgeTests {
         check(!f.bridge.hasGameFocus(), "Direct game actions also reject ordinary surface focus loss");
         f.surface.focused = true; f.bridge.close();
         check(!f.bridge.hasGameFocus(), "A closed bridge cannot authorize direct game actions");
+    }
+
+    private static void splitFocusDiagnostics() {
+        Fixture f=new Fixture();f.output.acceptsFocus=false;
+        check(!f.bridge.hasGameFocus(),"Native mismatch stays rejected while recording focus diagnostics");
+        String nativeMismatch=sectorpad.diagnostics.Diagnostics.snapshot();
+        check(nativeMismatch.contains("\"bridge.surface_focus\":\"true\"") && nativeMismatch.contains("\"bridge.native_focus\":\"false\""),"Reports distinguish LWJGL focus from native foreground mismatch");
+        f.surface.focused=false;f.bridge.hasGameFocus();
+        String surfaceMismatch=sectorpad.diagnostics.Diagnostics.snapshot();
+        check(surfaceMismatch.contains("\"bridge.surface_focus\":\"false\"") && surfaceMismatch.contains("\"bridge.native_focus\":\"not_queried\""),"Surface focus loss cannot report stale native focus");
+        f.bridge.close();
     }
 
     private static void observerRetry() {
